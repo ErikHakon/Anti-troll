@@ -17,6 +17,9 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: "Missing prompt" });
   }
 
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 55000);
+
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
@@ -30,6 +33,7 @@ export default async function handler(req, res) {
         max_tokens: 4096,
         messages: [{ role: "user", content: prompt }],
       }),
+      signal: controller.signal,
     });
 
     const data = await response.json();
@@ -40,6 +44,11 @@ export default async function handler(req, res) {
 
     return res.status(200).json(data);
   } catch (err) {
+    if (err.name === "AbortError") {
+      return res.status(504).json({ error: "La solicitud a la IA excedió el tiempo límite." });
+    }
     return res.status(500).json({ error: err.message });
+  } finally {
+    clearTimeout(timeout);
   }
 }

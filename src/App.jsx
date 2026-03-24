@@ -534,6 +534,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
         body: JSON.stringify({ prompt }),
       });
       if (!res.ok) {
+        if (res.status === 504) {
+          throw new Error("La IA tardó demasiado. Intentá con menos campeones opcionales o probá de nuevo.");
+        }
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error?.message || errData.error || `Error del servidor (${res.status})`);
       }
