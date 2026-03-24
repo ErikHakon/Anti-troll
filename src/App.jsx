@@ -165,6 +165,7 @@ function CoachTool() {
   const [error, setError] = useState(null);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [itemData, setItemData] = useState({});
+  const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
     fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/en_US/item.json")
@@ -193,8 +194,30 @@ function CoachTool() {
   const canGenerate = myChamp && laneOpponent;
   const otherLanes = LANES.filter(l => l !== myLane);
 
-  async function generate() {
-    setLoading(true); setError(null); setResult(null); setLoadingMsg(0);
+  function getCacheKey() {
+    const parts = [myChamp, myLane, laneOpponent, ...allies.filter(Boolean).sort(), ...enemies.filter(Boolean).sort()];
+    return "rc_cache_" + parts.join("|");
+  }
+
+  async function generate(skipCache = false) {
+    setLoading(true); setError(null); setResult(null); setLoadingMsg(0); setFromCache(false);
+    const cacheKey = getCacheKey();
+
+    if (!skipCache) {
+      try {
+        const cached = localStorage.getItem(cacheKey);
+        if (cached) {
+          const { data, ts } = JSON.parse(cached);
+          if (Date.now() - ts < 24 * 60 * 60 * 1000) {
+            setResult(data);
+            setFromCache(true);
+            setLoading(false);
+            return;
+          }
+        }
+      } catch {}
+    }
+
     const allyList = allies.filter(Boolean);
     const prompt = `Sos un coach challenger de League of Legends. Analizá esta partida y dame un game plan completo EN ESPAÑOL. Considerá TANTO la composición enemiga COMO la de mi equipo.
 
@@ -246,7 +269,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
       const data = await res.json();
       const text = data.content?.map(i => i.text || "").join("\n") || "";
       const clean = text.replace(/```json|```/g,"").trim();
-      setResult(JSON.parse(clean));
+      const parsed = JSON.parse(clean);
+      setResult(parsed);
+      try { localStorage.setItem(cacheKey, JSON.stringify({ data: parsed, ts: Date.now() })); } catch {}
     } catch(err) {
       console.error(err);
       setError(err.message || "Error al generar el análisis. Intentá de nuevo.");
@@ -342,7 +367,17 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
       {result && (
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           {/* Champion Portraits Header */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, padding:"20px 0 8px" }}>
+          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, padding:"20px 0 8px", position:"relative" }}>
+            <button onClick={() => generate(true)} style={{
+              position:"absolute", right:0, top:16,
+              background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
+              borderRadius:8, padding:"6px 12px", cursor:"pointer",
+              color:"#8a8580", fontSize:12, fontWeight:600, fontFamily:"'Outfit',sans-serif",
+              display:"flex", alignItems:"center", gap:4, transition:"all 0.2s",
+            }}
+              onMouseEnter={(e) => { e.currentTarget.style.background="rgba(200,155,60,0.1)"; e.currentTarget.style.borderColor="rgba(200,155,60,0.3)"; e.currentTarget.style.color="#c89b3c"; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background="rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.color="#8a8580"; }}
+            >🔄 Regenerar</button>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
               <div style={{ width:64, height:64, borderRadius:12, border:"2px solid #1dba5a", boxShadow:"0 0 20px rgba(29,186,90,0.3)", overflow:"hidden" }}>
                 <img src={getChampIcon(myChamp)} alt={myChamp} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
