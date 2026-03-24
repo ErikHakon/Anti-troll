@@ -113,8 +113,25 @@ function ResultSection({ title, icon, color, children }) {
   );
 }
 
+function normalize(str) {
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['\s]/g, "").trim();
+}
+
+function findItemId(name, itemData) {
+  if (!itemData.exact) return null;
+  const trimmed = name.includes(" o ") ? name.split(" o ")[0].trim() : name.trim();
+  if (itemData.exact[trimmed]) return itemData.exact[trimmed];
+  const norm = normalize(trimmed);
+  if (itemData.normalized[norm]) return itemData.normalized[norm];
+  const normKeys = Object.keys(itemData.normalized);
+  for (const k of normKeys) {
+    if (k.includes(norm) || norm.includes(k)) return itemData.normalized[k];
+  }
+  return null;
+}
+
 function ItemBadge({ name, itemData, index, color }) {
-  const id = itemData[name];
+  const id = findItemId(name, itemData);
   return (
     <div className="item-badge" style={{
       background:`${color}0a`, border:`1px solid ${color}25`, borderRadius:8,
@@ -172,14 +189,17 @@ function CoachTool() {
       fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/en_US/item.json").then(r => r.json()),
       fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/es_ES/item.json").then(r => r.json()),
     ]).then(([enData, esData]) => {
-      const lookup = {};
+      const exact = {};
+      const normalized = {};
       for (const [id, item] of Object.entries(enData.data)) {
-        lookup[item.name] = id;
+        exact[item.name] = id;
+        normalized[normalize(item.name)] = id;
       }
       for (const [id, item] of Object.entries(esData.data)) {
-        lookup[item.name] = id;
+        exact[item.name] = id;
+        normalized[normalize(item.name)] = id;
       }
-      setItemData(lookup);
+      setItemData({ exact, normalized });
     }).catch(() => {});
   }, []);
 
