@@ -574,11 +574,11 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
       {/* My Champ */}
       <div style={{ background:"rgba(200,155,60,0.05)", border:"1px solid rgba(200,155,60,0.25)", borderRadius:12, padding:20, marginBottom:14 }}>
         <div style={{ fontSize:13, textTransform:"uppercase", letterSpacing:"2px", color:"#d4a843", marginBottom:12, fontWeight:700 }}>🎮 Tu campeón</div>
-        <div style={{ display:"flex", gap:10 }}>
+        <div className="champ-lane-row" style={{ display:"flex", gap:10 }}>
           <div style={{ flex:1 }}>
             <ChampionPicker value={myChamp} onChange={setMyChamp} champions={availableFor(myChamp)} placeholder="Seleccioná tu campeón" />
           </div>
-          <div style={{ display:"flex", gap:3, background:"rgba(0,0,0,0.35)", borderRadius:8, padding:4, alignItems:"center" }}>
+          <div className="lane-selector" style={{ display:"flex", gap:3, background:"rgba(0,0,0,0.35)", borderRadius:8, padding:4, alignItems:"center" }}>
             {LANES.map(l => (
               <button key={l} onClick={() => setMyLane(l)} style={{
                 background: myLane===l ? "rgba(200,155,60,0.25)":"transparent",
@@ -593,7 +593,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
           </div>
         </div>
         <div style={{ marginTop:10 }}>
-          <div style={{ display:"flex", gap:3, background:"rgba(0,0,0,0.35)", borderRadius:8, padding:4 }}>
+          <div className="build-type-row" style={{ display:"flex", gap:3, background:"rgba(0,0,0,0.35)", borderRadius:8, padding:4 }}>
             {[
               { value:"auto", label:"🤖 Auto" },
               { value:"ad", label:"⚔️ AD" },
@@ -621,7 +621,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
           <span>🤝 Tu equipo</span>
           <span style={{ fontSize:11, color:"#6a6a6a", fontWeight:400, textTransform:"none", letterSpacing:0 }}>Mejora el análisis</span>
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <div className="allies-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
           {allies.map((a, i) => (
             <div key={i}>
               <div style={{ fontSize:12, color:"#6a6a6a", marginBottom:3, marginLeft:4, display:"flex", alignItems:"center", gap:4 }}>
@@ -642,7 +642,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
           </div>
           <ChampionPicker value={laneOpponent} onChange={setLaneOpponent} champions={availableFor(laneOpponent)} placeholder="¿Contra quién laneás?" accentColor="rgba(232,64,87,0.4)" />
         </div>
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+        <div className="enemies-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
           {enemies.map((e, i) => (
             <div key={i}>
               <div style={{ fontSize:12, color:"#6a6a6a", marginBottom:3, marginLeft:4, display:"flex", alignItems:"center", gap:4 }}>
@@ -679,8 +679,8 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
       {result && (
         <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           {/* Champion Portraits Header */}
-          <div style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, padding:"20px 0 8px", position:"relative" }}>
-            <button onClick={() => generate(true)} style={{
+          <div className="vs-header" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, padding:"20px 0 8px", position:"relative" }}>
+            <button className="regen-btn" onClick={() => generate(true)} style={{
               position:"absolute", right:0, top:16,
               background:"rgba(255,255,255,0.04)", border:"1px solid rgba(255,255,255,0.08)",
               borderRadius:8, padding:"6px 12px", cursor:"pointer",
@@ -691,17 +691,17 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
               onMouseLeave={(e) => { e.currentTarget.style.background="rgba(255,255,255,0.04)"; e.currentTarget.style.borderColor="rgba(255,255,255,0.08)"; e.currentTarget.style.color="#8a8580"; }}
             >🔄 Regenerar</button>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-              <div style={{ width:80, height:80, borderRadius:14, border:"2px solid #2dd66a", boxShadow:"0 0 24px rgba(45,214,106,0.35)", overflow:"hidden" }}>
+              <div className="vs-portrait" style={{ width:80, height:80, borderRadius:14, border:"2px solid #2dd66a", boxShadow:"0 0 24px rgba(45,214,106,0.35)", overflow:"hidden" }}>
                 <img src={getChampIcon(myChamp)} alt={myChamp} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               </div>
-              <span style={{ fontSize:14, fontWeight:700, color:"#2dd66a" }}>{myChamp}</span>
+              <span className="vs-name" style={{ fontSize:14, fontWeight:700, color:"#2dd66a" }}>{myChamp}</span>
             </div>
-            <div style={{ fontSize:24, fontWeight:900, color:"#6a6a6a", letterSpacing:2 }}>VS</div>
+            <div className="vs-text" style={{ fontSize:24, fontWeight:900, color:"#6a6a6a", letterSpacing:2 }}>VS</div>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
-              <div style={{ width:80, height:80, borderRadius:14, border:"2px solid #ff4d63", boxShadow:"0 0 24px rgba(255,77,99,0.35)", overflow:"hidden" }}>
+              <div className="vs-portrait" style={{ width:80, height:80, borderRadius:14, border:"2px solid #ff4d63", boxShadow:"0 0 24px rgba(255,77,99,0.35)", overflow:"hidden" }}>
                 <img src={getChampIcon(laneOpponent)} alt={laneOpponent} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
               </div>
-              <span style={{ fontSize:14, fontWeight:700, color:"#ff4d63" }}>{laneOpponent}</span>
+              <span className="vs-name" style={{ fontSize:14, fontWeight:700, color:"#ff4d63" }}>{laneOpponent}</span>
             </div>
           </div>
 
@@ -811,6 +811,7 @@ export default function App() {
   const [page, setPage] = useState("home");
   const [scrollY, setScrollY] = useState(0);
   const toolRef = useRef(null);
+  const [mobileMenu, setMobileMenu] = useState(false);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login"); // "login" or "register"
   const [authForm, setAuthForm] = useState({ email:"", password:"", username:"", region:"LAS" });
@@ -1017,6 +1018,61 @@ export default function App() {
     .auth-select { width:100%; background:rgba(0,0,0,0.4); border:1px solid rgba(255,255,255,0.08); border-radius:8px; padding:14px 16px; color:#f0e6d2; font-size:14px; font-family:'Outfit',sans-serif; outline:none; transition:border-color 0.3s; appearance:none; cursor:pointer; }
     .auth-select:focus { border-color:rgba(200,155,60,0.5); }
     .auth-select option { background:#12121f; color:#f0e6d2; }
+
+    /* ─── Mobile Responsive ─── */
+    .nav-desktop { display:flex; gap:24; align-items:center; }
+    .hamburger { display:none; background:none; border:none; color:#c89b3c; font-size:24px; cursor:pointer; padding:4px; }
+    .mobile-menu { display:none; }
+
+    @media (max-width: 768px) {
+      .hamburger { display:flex; align-items:center; justify-content:center; }
+      .nav-desktop { display:none !important; }
+      .mobile-menu {
+        display:flex; flex-direction:column; gap:8px;
+        position:fixed; top:64px; left:0; right:0; z-index:999;
+        background:rgba(8,8,16,0.98); backdrop-filter:blur(20px);
+        border-bottom:1px solid rgba(200,155,60,0.15);
+        padding:16px 24px 20px; animation:fadeUp 0.2s ease;
+      }
+      .mobile-menu .nav-link { display:block; padding:12px 0; font-size:15px; text-align:left; }
+      .mobile-menu .mobile-auth { display:flex; gap:10; padding-top:12px; border-top:1px solid rgba(255,255,255,0.06); }
+      .hero-section { padding:60px 16px 40px !important; min-height:auto !important; }
+      .hero-title { font-size:36px !important; }
+      .hero-subtitle { font-size:15px !important; margin-bottom:24px !important; }
+      .hero-stats { gap:24px !important; margin-top:32px !important; }
+      .hero-stats > div > div:first-child { font-size:22px !important; }
+      .hero-buttons .btn-gold, .hero-buttons .btn-outline { padding:14px 28px !important; font-size:14px !important; }
+      .tool-section { padding:40px 12px 60px !important; }
+      .tool-section h2 { font-size:28px !important; }
+      .coach-container { padding:0 !important; }
+      .champ-lane-row { flex-direction:column !important; }
+      .lane-selector { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+      .build-type-row button { font-size:11px !important; padding:7px 6px !important; }
+      .allies-grid, .enemies-grid { grid-template-columns:1fr !important; }
+      .vs-header { gap:12px !important; padding:12px 0 4px !important; }
+      .vs-portrait { width:60px !important; height:60px !important; border-radius:10px !important; }
+      .vs-name { font-size:12px !important; }
+      .vs-text { font-size:18px !important; }
+      .regen-btn { position:relative !important; right:auto !important; top:auto !important; margin:0 auto 8px !important; }
+      .result-section { padding:16px 14px !important; border-radius:10px !important; }
+      .features-section { padding:60px 16px !important; }
+      .features-section h2 { font-size:28px !important; }
+      .features-grid { grid-template-columns:1fr !important; }
+      .card { padding:24px 20px !important; }
+      .how-section { padding:40px 16px !important; }
+      .how-section h2 { font-size:28px !important; }
+      .legal-page { padding:80px 16px 40px !important; }
+      .legal-page h1 { font-size:24px !important; }
+      .footer-inner { flex-direction:column; text-align:center; }
+      nav { padding:0 16px !important; }
+    }
+
+    @media (max-width: 380px) {
+      .hero-title { font-size:28px !important; }
+      .hero-stats { gap:16px !important; }
+      .hero-stats > div > div:first-child { font-size:18px !important; }
+      .btn-gold, .btn-outline { padding:12px 20px !important; font-size:13px !important; letter-spacing:1px !important; }
+    }
   `;
 
   if (sessionLoading) {
@@ -1046,12 +1102,15 @@ export default function App() {
         transition:"all 0.4s", padding:"0 40px",
       }}>
         <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:64 }}>
-          <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setPage("home"); window.scrollTo({top:0,behavior:"smooth"}); }}>
+          <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setPage("home"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>
             <div style={{ width:32, height:32, background:"linear-gradient(135deg,#c89b3c,#785a28)", borderRadius:7, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>⚡</div>
             <span style={{ fontSize:18, fontWeight:900, color:"#f0e6d2", letterSpacing:"-0.5px" }}>RIFT COACH</span>
             <span style={{ fontSize:11, fontWeight:700, color:"#c89b3c", background:"rgba(200,155,60,0.12)", padding:"2px 8px", borderRadius:4, letterSpacing:"1px" }}>AI</span>
           </div>
-          <div style={{ display:"flex", gap:24, alignItems:"center" }}>
+          <button className="hamburger" onClick={() => setMobileMenu(!mobileMenu)}>
+            {mobileMenu ? "✕" : "☰"}
+          </button>
+          <div className="nav-desktop" style={{ display:"flex", gap:24, alignItems:"center" }}>
             <button className={`nav-link ${page==="home"?"active":""}`} onClick={() => { setPage("home"); window.scrollTo({top:0,behavior:"smooth"}); }}>Inicio</button>
             <button className="nav-link" onClick={scrollToTool}>Coach</button>
             <button className={`nav-link ${page==="legal"?"active":""}`} onClick={() => { setPage("legal"); window.scrollTo({top:0,behavior:"smooth"}); }}>Legal</button>
@@ -1092,6 +1151,39 @@ export default function App() {
           </div>
         </div>
       </nav>
+
+      {/* Mobile Menu */}
+      {mobileMenu && (
+        <div className="mobile-menu">
+          <button className="nav-link" onClick={() => { setPage("home"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>Inicio</button>
+          <button className="nav-link" onClick={() => { setMobileMenu(false); scrollToTool(); }}>Coach</button>
+          <button className="nav-link" onClick={() => { setPage("legal"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>Legal</button>
+          <div className="mobile-auth">
+            {user ? (
+              <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
+                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+                  <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#c89b3c,#785a28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#080810" }}>
+                    {user.username.charAt(0).toUpperCase()}
+                  </div>
+                  <span style={{ fontSize:14, fontWeight:700, color:"#f0e6d2" }}>{user.username}</span>
+                </div>
+                <button onClick={() => { logout(); setMobileMenu(false); }} style={{ background:"none", border:"none", color:"#e84057", cursor:"pointer", fontSize:13, fontFamily:"'Outfit'", fontWeight:600 }}>Salir</button>
+              </div>
+            ) : (
+              <>
+                <button onClick={() => { setAuthMode("login"); setPage("auth"); setMobileMenu(false); setAuthError(null); }}
+                  style={{ flex:1, background:"none", border:"1px solid rgba(200,155,60,0.3)", color:"#c89b3c", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:700, cursor:"pointer", fontFamily:"'Outfit'" }}>
+                  Iniciar Sesión
+                </button>
+                <button onClick={() => { setAuthMode("register"); setPage("auth"); setMobileMenu(false); setAuthError(null); }}
+                  style={{ flex:1, background:"linear-gradient(135deg,#c89b3c,#a07830)", border:"none", color:"#080810", padding:"10px 16px", borderRadius:6, fontSize:13, fontWeight:800, cursor:"pointer", fontFamily:"'Outfit'" }}>
+                  Registrarse
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {page === "auth" ? (
         /* ─── Auth Page ─── */
@@ -1194,7 +1286,7 @@ export default function App() {
           </div>
         </div>
       ) : page === "legal" ? (
-        <div style={{ maxWidth:800, margin:"0 auto", padding:"100px 24px 60px" }}>
+        <div className="legal-page" style={{ maxWidth:800, margin:"0 auto", padding:"100px 24px 60px" }}>
           <button onClick={() => setPage("home")} style={{ background:"none", border:"none", color:"#c89b3c", cursor:"pointer", fontSize:14, fontFamily:"'Outfit'", marginBottom:32, display:"flex", alignItems:"center", gap:6 }}>← Volver</button>
           <h1 style={{ fontSize:32, fontWeight:900, color:"#f0e6d2", marginBottom:40 }}>Legal</h1>
 
@@ -1227,7 +1319,7 @@ export default function App() {
       ) : (
         <div>
           {/* Hero */}
-          <div style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", padding:"80px 24px" }}>
+          <div className="hero-section" style={{ minHeight:"100vh", display:"flex", alignItems:"center", justifyContent:"center", position:"relative", overflow:"hidden", padding:"80px 24px" }}>
             <div style={{ position:"absolute", inset:0, background:"radial-gradient(ellipse 60% 50% at 50% 40%, rgba(200,155,60,0.06) 0%, transparent 70%)" }} />
             <div style={{ position:"absolute", top:"15%", left:"10%", width:400, height:400, borderRadius:"50%", background:"radial-gradient(circle, rgba(200,155,60,0.04) 0%, transparent 70%)", filter:"blur(60px)" }} />
             <div style={{ position:"absolute", bottom:"20%", right:"10%", width:300, height:300, borderRadius:"50%", background:"radial-gradient(circle, rgba(10,203,230,0.03) 0%, transparent 70%)", filter:"blur(50px)" }} />
@@ -1238,22 +1330,22 @@ export default function App() {
                 <span style={{ color:"#c89b3c", fontSize:12, fontWeight:700, letterSpacing:"1.5px", textTransform:"uppercase" }}>Coaching con Inteligencia Artificial</span>
               </div>
 
-              <h1 className="fade-up d1" style={{ fontSize:"clamp(40px, 6vw, 72px)", fontWeight:900, lineHeight:1.05, marginBottom:24, letterSpacing:"-2px" }}>
+              <h1 className="fade-up d1 hero-title" style={{ fontSize:"clamp(40px, 6vw, 72px)", fontWeight:900, lineHeight:1.05, marginBottom:24, letterSpacing:"-2px" }}>
                 <span style={{ color:"#f0e6d2" }}>Tu coach</span><br/>
                 <span style={{ background:"linear-gradient(90deg, #c89b3c, #e8c56d, #c89b3c)", backgroundSize:"200% auto", WebkitBackgroundClip:"text", WebkitTextFillColor:"transparent", animation:"shimmer 4s linear infinite" }}>challenger</span><br/>
                 <span style={{ color:"#f0e6d2" }}>personal</span>
               </h1>
 
-              <p className="fade-up d2" style={{ fontSize:18, color:"#6a6a6a", lineHeight:1.7, maxWidth:560, margin:"0 auto 40px", fontWeight:400 }}>
+              <p className="fade-up d2 hero-subtitle" style={{ fontSize:18, color:"#6a6a6a", lineHeight:1.7, maxWidth:560, margin:"0 auto 40px", fontWeight:400 }}>
                 La primera herramienta que analiza ambas composiciones con IA y te da builds, runas y estrategia adaptada a tu partida exacta. No estadísticas genéricas. Razonamiento real.
               </p>
 
-              <div className="fade-up d3" style={{ display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap" }}>
+              <div className="fade-up d3 hero-buttons" style={{ display:"flex", gap:16, justifyContent:"center", flexWrap:"wrap" }}>
                 <button className="btn-gold" onClick={scrollToTool}>Probar Ahora</button>
                 <button className="btn-outline" onClick={() => document.getElementById("features")?.scrollIntoView({behavior:"smooth"})}>Ver Features</button>
               </div>
 
-              <div className="fade-up d4" style={{ marginTop:48, display:"flex", justifyContent:"center", gap:48 }}>
+              <div className="fade-up d4 hero-stats" style={{ marginTop:48, display:"flex", justifyContent:"center", gap:48 }}>
                 {[["100%","Contextual"],["~10s","Respuesta"],["2 Equipos","Análisis"]].map(([n,l], i) => (
                   <div key={i} style={{ textAlign:"center" }}>
                     <div style={{ fontSize:28, fontWeight:900, color:"#c89b3c" }}>{n}</div>
@@ -1265,7 +1357,7 @@ export default function App() {
           </div>
 
           {/* Tool - Right after hero */}
-          <div ref={toolRef} style={{ padding:"80px 24px 100px", background:"linear-gradient(180deg, rgba(200,155,60,0.03) 0%, transparent 100%)", borderTop:"1px solid rgba(200,155,60,0.08)" }}>
+          <div ref={toolRef} className="tool-section" style={{ padding:"80px 24px 100px", background:"linear-gradient(180deg, rgba(200,155,60,0.03) 0%, transparent 100%)", borderTop:"1px solid rgba(200,155,60,0.08)" }}>
             <div style={{ textAlign:"center", marginBottom:48 }}>
               <div style={{ fontSize:13, color:"#d4a843", textTransform:"uppercase", letterSpacing:"3px", fontWeight:700, marginBottom:12 }}>Herramienta</div>
               <h2 style={{ fontSize:42, fontWeight:900, color:"#f0e6d2", letterSpacing:"-1px", marginBottom:8 }}>AI Coach</h2>
@@ -1275,12 +1367,12 @@ export default function App() {
           </div>
 
           {/* Features */}
-          <div id="features" style={{ padding:"100px 24px", maxWidth:1100, margin:"0 auto" }}>
+          <div id="features" className="features-section" style={{ padding:"100px 24px", maxWidth:1100, margin:"0 auto" }}>
             <div style={{ textAlign:"center", marginBottom:64 }}>
               <div style={{ fontSize:12, color:"#c89b3c", textTransform:"uppercase", letterSpacing:"3px", fontWeight:700, marginBottom:12 }}>¿Por qué es diferente?</div>
               <h2 style={{ fontSize:40, fontWeight:900, color:"#f0e6d2", letterSpacing:"-1px" }}>Lo que ninguna app te da</h2>
             </div>
-            <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:20 }}>
+            <div className="features-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fit, minmax(280px, 1fr))", gap:20 }}>
               {[
                 { icon:"🧠", title:"IA que razona", desc:"No busca winrates en una base de datos. Analiza POR QUÉ cada item es óptimo contra ESA composición y CON tu equipo." },
                 { icon:"⚔️", title:"Build de línea vs teamfight", desc:"Separa la build en dos fases: items para ganar tu matchup directo, y items para las peleas de equipo." },
@@ -1299,7 +1391,7 @@ export default function App() {
           </div>
 
           {/* How it works */}
-          <div style={{ padding:"80px 24px", maxWidth:700, margin:"0 auto" }}>
+          <div className="how-section" style={{ padding:"80px 24px", maxWidth:700, margin:"0 auto" }}>
             <div style={{ textAlign:"center", marginBottom:56 }}>
               <div style={{ fontSize:12, color:"#c89b3c", textTransform:"uppercase", letterSpacing:"3px", fontWeight:700, marginBottom:12 }}>3 pasos</div>
               <h2 style={{ fontSize:36, fontWeight:900, color:"#f0e6d2", letterSpacing:"-1px" }}>Cómo funciona</h2>
@@ -1321,7 +1413,7 @@ export default function App() {
 
           {/* Footer */}
           <footer style={{ padding:"40px 24px", borderTop:"1px solid rgba(255,255,255,0.04)", maxWidth:1100, margin:"0 auto" }}>
-            <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
+            <div className="footer-inner" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <div style={{ width:24, height:24, background:"linear-gradient(135deg,#c89b3c,#785a28)", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>⚡</div>
                 <span style={{ fontSize:14, fontWeight:800, color:"#5b5a56" }}>RIFT COACH AI</span>
