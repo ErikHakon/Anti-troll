@@ -168,16 +168,19 @@ function CoachTool() {
   const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
-    fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/en_US/item.json")
-      .then(r => r.json())
-      .then(data => {
-        const lookup = {};
-        for (const [id, item] of Object.entries(data.data)) {
-          lookup[item.name] = id;
-        }
-        setItemData(lookup);
-      })
-      .catch(() => {});
+    Promise.all([
+      fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/en_US/item.json").then(r => r.json()),
+      fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/es_ES/item.json").then(r => r.json()),
+    ]).then(([enData, esData]) => {
+      const lookup = {};
+      for (const [id, item] of Object.entries(enData.data)) {
+        lookup[item.name] = id;
+      }
+      for (const [id, item] of Object.entries(esData.data)) {
+        lookup[item.name] = id;
+      }
+      setItemData(lookup);
+    }).catch(() => {});
   }, []);
 
   const msgs = ["Analizando composición enemiga...","Evaluando sinergia de equipo...","Optimizando build contextual...","Generando game plan completo..."];
@@ -227,6 +230,9 @@ OPONENTE DE LÍNEA: ${laneOpponent}
 OTROS ENEMIGOS: ${enemies.filter(Boolean).join(", ") || "No especificados"}
 
 IMPORTANTE: Tené en cuenta la composición de MI equipo para decidir la build. Si mi equipo ya tiene tanque, puedo buildear más agresivo. Si un aliado tiene anti-heal, no lo necesito yo. Si soy el único frontline, priorizo tanqueo. Analizá la sinergia y cómo mi build la potencia.
+
+IMPORTANTE: Usá los nombres de ítems EXACTOS en ESPAÑOL como aparecen en el cliente del juego (ejemplo: 'Tempestad de Luden', 'Botas de hechicero', 'Sombra de Fuego'). NO uses nombres en inglés.
+Usá los nombres de runas en ESPAÑOL (ejemplo: 'Electrocutar', 'Cosecha oscura', 'Conquistador').
 
 Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estructura exacta:
 {
