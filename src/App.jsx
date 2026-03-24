@@ -123,11 +123,59 @@ function findItemId(name, itemData) {
   if (itemData.exact[trimmed]) return itemData.exact[trimmed];
   const norm = normalize(trimmed);
   if (itemData.normalized[norm]) return itemData.normalized[norm];
+  const variants = [norm];
+  if (norm.includes("s")) variants.push(norm.replace(/s(\w)/g, "$1"));
+  const noThe = norm.replace(/^the/, "");
+  if (noThe !== norm) variants.push(noThe);
   const normKeys = Object.keys(itemData.normalized);
-  for (const k of normKeys) {
-    if (k.includes(norm) || norm.includes(k)) return itemData.normalized[k];
+  for (const v of variants) {
+    for (const k of normKeys) {
+      if (k.includes(v) || v.includes(k)) return itemData.normalized[k];
+    }
   }
   return null;
+}
+
+function findRuneIcon(name, runeData) {
+  if (!runeData.exact) return null;
+  const trimmed = name.trim();
+  if (runeData.exact[trimmed]) return runeData.exact[trimmed];
+  const norm = normalize(trimmed);
+  if (runeData.normalized[norm]) return runeData.normalized[norm];
+  const normKeys = Object.keys(runeData.normalized);
+  for (const k of normKeys) {
+    if (k.includes(norm) || norm.includes(k)) return runeData.normalized[k];
+  }
+  return null;
+}
+
+function RuneBadge({ name, runeData, color }) {
+  const icon = findRuneIcon(name, runeData);
+  return (
+    <div style={{
+      background:`${color}0a`, border:`1px solid ${color}25`, borderRadius:8,
+      padding:"6px 12px", fontSize:13, fontWeight:600, color,
+      display:"inline-flex", alignItems:"center", gap:6, transition:"all 0.2s",
+    }}
+      onMouseEnter={(e) => { e.currentTarget.style.transform="translateY(-2px)"; e.currentTarget.style.boxShadow=`0 4px 16px ${color}20`; }}
+      onMouseLeave={(e) => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}
+    >
+      {icon && <img src={icon} alt={name} style={{ width:24, height:24, borderRadius:4 }} onError={(e) => { e.target.style.display="none"; }} />}
+      {name}
+    </div>
+  );
+}
+
+function RunesList({ text, runeData, color }) {
+  if (!text || !runeData.exact) return <span style={{ color:"#c8c0b0", fontSize:14 }}>{text}</span>;
+  const allNames = [...Object.keys(runeData.exact)];
+  const found = allNames.filter(rn => text.toLowerCase().includes(rn.toLowerCase()));
+  if (found.length === 0) return <span style={{ color:"#c8c0b0", fontSize:14 }}>{text}</span>;
+  return (
+    <div style={{ display:"flex", flexWrap:"wrap", gap:6 }}>
+      {found.map((rn, i) => <RuneBadge key={i} name={rn} runeData={runeData} color={color} />)}
+    </div>
+  );
 }
 
 function ItemBadge({ name, itemData, index, color }) {
@@ -182,6 +230,7 @@ function CoachTool() {
   const [error, setError] = useState(null);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [itemData, setItemData] = useState({});
+  const [runeData, setRuneData] = useState({});
   const [fromCache, setFromCache] = useState(false);
 
   useEffect(() => {
@@ -200,6 +249,31 @@ function CoachTool() {
         normalized[normalize(item.name)] = id;
       }
       setItemData({ exact, normalized });
+    }).catch(() => {});
+
+    Promise.all([
+      fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/en_US/runesReforged.json").then(r => r.json()),
+      fetch("https://ddragon.leagueoflegends.com/cdn/15.6.1/data/es_ES/runesReforged.json").then(r => r.json()),
+    ]).then(([enRunes, esRunes]) => {
+      const exact = {};
+      const normalized = {};
+      const addRunes = (trees) => {
+        for (const tree of trees) {
+          const url = "https://ddragon.leagueoflegends.com/cdn/img/" + tree.icon;
+          exact[tree.name] = url;
+          normalized[normalize(tree.name)] = url;
+          for (const slot of tree.slots) {
+            for (const rune of slot.runes) {
+              const rUrl = "https://ddragon.leagueoflegends.com/cdn/img/" + rune.icon;
+              exact[rune.name] = rUrl;
+              normalized[normalize(rune.name)] = rUrl;
+            }
+          }
+        }
+      };
+      addRunes(enRunes);
+      addRunes(esRunes);
+      setRuneData({ exact, normalized });
     }).catch(() => {});
   }, []);
 
@@ -264,6 +338,7 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
     "first_back": "Item de primer recall",
     "core_laning": "1-2 items para ganar la línea",
     "boots": "Botas recomendadas y por qué",
+    "items": ["item_inicial","item_primer_recall","core_item1","botas"],
     "explanation": "Por qué estos items contra este matchup"
   },
   "teamfight_build": {
@@ -429,6 +504,13 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
             </ResultSection>
           )}
           <ResultSection icon="⚔️" title={`Build de Línea vs ${laneOpponent}`} color="#ff4d63">
+            {result.laning_build?.items?.length > 0 && (
+              <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:14 }}>
+                {result.laning_build.items.map((item, i) => (
+                  <ItemBadge key={i} name={item} itemData={itemData} index={i} color="#ff4d63" />
+                ))}
+              </div>
+            )}
             <BuildRow label="Inicio" value={result.laning_build?.starter} />
             <BuildRow label="1er Recall" value={result.laning_build?.first_back} />
             <BuildRow label="Core" value={result.laning_build?.core_laning} />
@@ -451,8 +533,14 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
             </div>
           </ResultSection>
           <ResultSection icon="✨" title="Runas" color="#d07fff">
-            <BuildRow label="Primarias" value={result.runes?.primary} />
-            <BuildRow label="Secundarias" value={result.runes?.secondary} />
+            <div style={{ marginBottom:10 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#d07fff", textTransform:"uppercase", letterSpacing:"1px", marginBottom:8 }}>Primarias</div>
+              <RunesList text={result.runes?.primary} runeData={runeData} color="#d07fff" />
+            </div>
+            <div style={{ marginBottom:10 }}>
+              <div style={{ fontSize:12, fontWeight:700, color:"#d07fff", textTransform:"uppercase", letterSpacing:"1px", marginBottom:8 }}>Secundarias</div>
+              <RunesList text={result.runes?.secondary} runeData={runeData} color="#d07fff" />
+            </div>
             {result.runes?.explanation && (
               <div style={{ marginTop:12, background:"rgba(208,127,255,0.06)", borderRadius:8, padding:"10px 14px", fontSize:14, lineHeight:1.5, color:"#c8c0b0", fontStyle:"italic" }}>{result.runes.explanation}</div>
             )}
