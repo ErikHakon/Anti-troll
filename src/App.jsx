@@ -218,6 +218,160 @@ function PhaseBlock({ label, text, color }) {
   );
 }
 
+/* ─── New Section Components ─── */
+function WinConditionCard({ text }) {
+  if (!text) return null;
+  return (
+    <div style={{
+      position:"relative", overflow:"hidden",
+      background:"linear-gradient(135deg, rgba(255,215,0,0.15) 0%, rgba(200,155,60,0.08) 40%, rgba(0,0,0,0.35) 100%)",
+      border:"3px solid #c89b3c", borderRadius:16, padding:28,
+      boxShadow:"0 0 30px rgba(200,155,60,0.15), inset 0 0 40px rgba(255,215,0,0.05)",
+    }}>
+      <div style={{ position:"absolute", top:0, left:0, right:0, height:2, background:"linear-gradient(90deg, transparent, #ffd700, transparent)" }} />
+      <div style={{ position:"absolute", top:-20, right:-20, width:80, height:80, borderRadius:"50%", background:"radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 70%)", pointerEvents:"none" }} />
+      <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12, position:"relative" }}>
+        <span style={{ fontSize:32 }}>🏆</span>
+        <span style={{ fontSize:17, fontWeight:800, color:"#ffd700", textTransform:"uppercase", letterSpacing:"1.5px" }}>Win Condition</span>
+      </div>
+      <p style={{ margin:0, fontSize:16, fontWeight:700, color:"#ffd700", lineHeight:1.6, position:"relative" }}>{text}</p>
+    </div>
+  );
+}
+
+function PowerSpikesTimeline({ spikes }) {
+  if (!spikes || spikes.length === 0) return null;
+  const colors = spikes.map((_, i) => {
+    const ratio = spikes.length === 1 ? 0.5 : i / (spikes.length - 1);
+    if (ratio < 0.33) return "#ff4d63";
+    if (ratio < 0.66) return "#ffd700";
+    return "#12d9f5";
+  });
+  return (
+    <div style={{ padding:"16px 0 8px", marginBottom:8 }}>
+      <div style={{ fontSize:13, fontWeight:700, color:"#2dd66a", textTransform:"uppercase", letterSpacing:"1px", marginBottom:16 }}>⚡ Power Spikes</div>
+      <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px" }}>
+        <div style={{ position:"absolute", left:20, right:20, top:"50%", height:2, background:"linear-gradient(90deg, #ff4d63, #ffd700, #12d9f5)", transform:"translateY(-1px)", zIndex:0 }} />
+        {spikes.map((spike, i) => (
+          <div key={i} style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8, zIndex:1, position:"relative", flex:1 }}>
+            <div style={{ fontSize:11, fontWeight:700, color:colors[i], textTransform:"uppercase", letterSpacing:"0.5px", textAlign:"center", whiteSpace:"nowrap" }}>{spike.timing}</div>
+            <div
+              style={{
+                width:18, height:18, borderRadius:"50%", background:colors[i],
+                boxShadow:`0 0 12px ${colors[i]}60`, cursor:"pointer", transition:"all 0.3s", position:"relative",
+              }}
+              title={spike.description}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "scale(1.5)";
+                e.currentTarget.style.boxShadow = `0 0 20px ${colors[i]}`;
+                const desc = e.currentTarget.nextSibling;
+                if (desc) { desc.style.opacity = "1"; desc.style.maxHeight = "100px"; }
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = `0 0 12px ${colors[i]}60`;
+                const desc = e.currentTarget.nextSibling;
+                if (desc) { desc.style.opacity = "0"; desc.style.maxHeight = "0"; }
+              }}
+            />
+            <div style={{ fontSize:12, color:"#c8c0b0", textAlign:"center", maxWidth:140, lineHeight:1.4, overflow:"hidden", maxHeight:0, opacity:0, transition:"all 0.3s" }}>
+              {spike.description}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function ThreatPriority({ threats }) {
+  if (!threats || threats.length === 0) return null;
+  const dangerOrder = { alta: 0, media: 1, baja: 2 };
+  const sorted = [...threats].sort((a, b) => (dangerOrder[a.danger] ?? 3) - (dangerOrder[b.danger] ?? 3));
+  const dangerColor = { alta: "#ff4d63", media: "#ff9f43", baja: "#2dd66a" };
+  const dangerLabel = { alta: "ALTA", media: "MEDIA", baja: "BAJA" };
+  return (
+    <ResultSection icon="⚠️" title="Threat Priority" color="#ff4d63">
+      <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
+        {sorted.map((t, i) => (
+          <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(0,0,0,0.25)", borderRadius:10, padding:"10px 14px" }}>
+            <img src={getChampIcon(t.champion)} alt={t.champion}
+              style={{ width:36, height:36, borderRadius:6, border:`2px solid ${dangerColor[t.danger] || "#666"}` }}
+              onError={(e) => { e.target.style.display = "none"; }} />
+            <div style={{ flex:1, minWidth:0 }}>
+              <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
+                <span style={{ fontSize:14, fontWeight:700, color:"#f0e6d2" }}>{t.champion}</span>
+                <span style={{ fontSize:10, fontWeight:800, color:dangerColor[t.danger] || "#666", background:`${dangerColor[t.danger] || "#666"}18`, padding:"2px 8px", borderRadius:4, letterSpacing:"0.5px" }}>
+                  {dangerLabel[t.danger] || t.danger}
+                </span>
+              </div>
+              <div style={{ height:4, borderRadius:2, background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
+                <div style={{
+                  height:"100%", borderRadius:2,
+                  width: t.danger === "alta" ? "100%" : t.danger === "media" ? "60%" : "30%",
+                  background: dangerColor[t.danger] || "#666",
+                  transition:"width 0.5s",
+                }} />
+              </div>
+              <p style={{ margin:"4px 0 0", fontSize:12, color:"#9a9590", lineHeight:1.4 }}>{t.reason}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </ResultSection>
+  );
+}
+
+function highlightAbilities(text, color) {
+  if (!text) return text;
+  const parts = text.split(/\b([QWER])\b/g);
+  return parts.map((part, i) => {
+    if (/^[QWER]$/.test(part)) {
+      return <span key={i} style={{ fontWeight:800, color }}>{part}</span>;
+    }
+    return part;
+  });
+}
+
+function CombosCard({ combos }) {
+  if (!combos) return null;
+  const sections = [
+    { key: "trading", label: "Trading", icon: "⚡", color: "#ffd700" },
+    { key: "all_in", label: "All-in", icon: "💀", color: "#ff4d63" },
+    { key: "teamfight", label: "Teamfight", icon: "👥", color: "#12d9f5" },
+  ];
+  return (
+    <ResultSection icon="🎯" title="Combos" color="#d4a843">
+      <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
+        {sections.map(s => {
+          const text = combos[s.key];
+          if (!text) return null;
+          return (
+            <div key={s.key} style={{ background:`${s.color}0a`, border:`1px solid ${s.color}25`, borderRadius:10, padding:"12px 16px" }}>
+              <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:8 }}>
+                <span style={{ fontSize:16 }}>{s.icon}</span>
+                <span style={{ fontSize:13, fontWeight:800, color:s.color, textTransform:"uppercase", letterSpacing:"1px" }}>{s.label}</span>
+              </div>
+              <div style={{ fontFamily:"'JetBrains Mono', monospace", fontSize:14, color:"#e8e0d0", lineHeight:1.6 }}>
+                {highlightAbilities(text, s.color)}
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </ResultSection>
+  );
+}
+
+function WardSpotsCard({ text }) {
+  if (!text) return null;
+  return (
+    <ResultSection icon="👁️" title="Ward Spots" color="#2dd66a">
+      <p style={{ margin:0, color:"#c8c0b0", fontSize:14, lineHeight:1.6 }}>{text}</p>
+    </ResultSection>
+  );
+}
+
 /* ─── Coach Tool ─── */
 function CoachTool() {
   const [myChamp, setMyChamp] = useState(null);
@@ -356,7 +510,22 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
     "mid": "Qué hacer en mid game con tu equipo",
     "late": "Win condition del late game con tu comp",
     "tips": ["tip1","tip2","tip3"]
-  }
+  },
+  "win_condition": "Una oración clara tipo 'Ganás esta partida si...' explicando la condición de victoria",
+  "power_spikes": [
+    { "timing": "Nivel 2", "description": "Por qué sos fuerte en este punto" },
+    { "timing": "Nivel 6 + Lost Chapter", "description": "..." },
+    { "timing": "2 items", "description": "..." }
+  ],
+  "threat_priority": [
+    { "champion": "NombreChamp", "danger": "alta/media/baja", "reason": "Por qué es peligroso para vos" }
+  ],
+  "combos": {
+    "trading": "Combo corto para tradear en línea (ej: Q > AA > E > retroceder)",
+    "all_in": "Combo completo para all-in o kill",
+    "teamfight": "Qué hacer en teamfight (ej: R para engage, W para peel, focus al carry)"
+  },
+  "ward_spots": "Dónde wardear según la fase del juego y el matchup"
 }`;
     try {
       const res = await fetch("/api/coach", {
@@ -494,15 +663,26 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
             </div>
           </div>
 
+          {/* 2. Win Condition */}
+          <WinConditionCard text={result.win_condition} />
+
+          {/* 3. Análisis */}
           <ResultSection icon="📊" title="Análisis" color="#d4a843">
             <p style={{ margin:"0 0 10px", color:"#c8c0b0", lineHeight:1.6, fontSize:15 }}>{result.matchup_summary}</p>
             <div style={{ background:"rgba(212,168,67,0.1)", borderRadius:8, padding:"10px 14px", fontSize:14, color:"#d4a843", fontWeight:600 }}>{result.damage_analysis}</div>
           </ResultSection>
+
+          {/* 4. Sinergia de Equipo */}
           {result.team_synergy && (
             <ResultSection icon="🤝" title="Sinergia de Equipo" color="#2dd66a">
               <p style={{ margin:0, color:"#c8c0b0", lineHeight:1.6, fontSize:14 }}>{result.team_synergy}</p>
             </ResultSection>
           )}
+
+          {/* 5. Threat Priority */}
+          <ThreatPriority threats={result.threat_priority} />
+
+          {/* 6. Build de Línea */}
           <ResultSection icon="⚔️" title={`Build de Línea vs ${laneOpponent}`} color="#ff4d63">
             {result.laning_build?.items?.length > 0 && (
               <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:14 }}>
@@ -519,6 +699,8 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
               <div style={{ marginTop:12, background:"rgba(255,77,99,0.06)", borderRadius:8, padding:"10px 14px", fontSize:14, lineHeight:1.5, color:"#c8c0b0", fontStyle:"italic" }}>{result.laning_build.explanation}</div>
             )}
           </ResultSection>
+
+          {/* 7. Build Completa */}
           <ResultSection icon="🏆" title="Build Completa" color="#12d9f5">
             <div style={{ display:"flex", flexWrap:"wrap", gap:8, marginBottom:14 }}>
               {result.teamfight_build?.full_build?.map((item, i) => (
@@ -532,6 +714,8 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
               <p style={{ margin:0, color:"#c8c0b0", fontSize:14 }}><strong style={{ color:"#12d9f5" }}>Situacional:</strong> {result.teamfight_build?.situational}</p>
             </div>
           </ResultSection>
+
+          {/* 8. Runas */}
           <ResultSection icon="✨" title="Runas" color="#d07fff">
             <div style={{ marginBottom:10 }}>
               <div style={{ fontSize:12, fontWeight:700, color:"#d07fff", textTransform:"uppercase", letterSpacing:"1px", marginBottom:8 }}>Primarias</div>
@@ -545,7 +729,13 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
               <div style={{ marginTop:12, background:"rgba(208,127,255,0.06)", borderRadius:8, padding:"10px 14px", fontSize:14, lineHeight:1.5, color:"#c8c0b0", fontStyle:"italic" }}>{result.runes.explanation}</div>
             )}
           </ResultSection>
+
+          {/* 9. Combos */}
+          <CombosCard combos={result.combos} />
+
+          {/* 10. Game Plan (con Power Spikes timeline arriba) */}
           <ResultSection icon="🗺️" title="Game Plan" color="#2dd66a">
+            <PowerSpikesTimeline spikes={result.power_spikes} />
             <PhaseBlock label="Early (1-6)" text={result.game_plan?.early} color="#ff4d63" />
             <PhaseBlock label="Mid Game" text={result.game_plan?.mid} color="#d4a843" />
             <PhaseBlock label="Late Game" text={result.game_plan?.late} color="#12d9f5" />
@@ -565,6 +755,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
               </div>
             )}
           </ResultSection>
+
+          {/* 11. Ward Spots */}
+          <WardSpotsCard text={result.ward_spots} />
         </div>
       )}
     </div>
