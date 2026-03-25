@@ -25,7 +25,22 @@ const CHAMPIONS = [
 const LANES = ["TOP","MID","JGL","ADC","SUP"];
 const LANE_ICONS = { TOP:"⚔️", MID:"🔥", JGL:"🌿", ADC:"🏹", SUP:"🛡️" };
 
+// DDragon champion filename overrides
+const CHAMP_FILE_NAMES = {
+  "Wukong":"MonkeyKing", "Cho'Gath":"Chogath", "Kha'Zix":"Khazix",
+  "Kai'Sa":"Kaisa", "Vel'Koz":"Velkoz", "Kog'Maw":"KogMaw",
+  "Rek'Sai":"RekSai", "Bel'Veth":"Belveth", "K'Sante":"KSante",
+  "LeBlanc":"Leblanc", "Nunu & Willump":"Nunu",
+  "Renata Glasc":"RenataGlasc", "Jarvan IV":"JarvanIV",
+  "Lee Sin":"LeeSin", "Master Yi":"MasterYi", "Miss Fortune":"MissFortune",
+  "Tahm Kench":"TahmKench", "Twisted Fate":"TwistedFate", "Xin Zhao":"XinZhao",
+  "Aurelion Sol":"AurelionSol", "Dr. Mundo":"DrMundo",
+};
+
 function getChampIcon(name) {
+  if (!name) return "";
+  const override = CHAMP_FILE_NAMES[name];
+  if (override) return `https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/${override}.png`;
   const f = name.replace(/['\s.]/g,"").replace("&Willump","");
   return `https://ddragon.leagueoflegends.com/cdn/15.6.1/img/champion/${f}.png`;
 }
@@ -118,54 +133,79 @@ function normalize(str) {
   return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['\s]/g, "").trim();
 }
 
-// Alias map: AI-generated names → DDragon names (es_ES/en_US)
-const ITEM_ALIASES = {
+// Direct alias → DDragon item ID map for names the AI commonly generates
+const ITEM_ID_ALIASES = {
   // AP items
-  "sombra de fuego":"Llamasombría", "shadowflame":"Llamasombría", "sombra fuego":"Llamasombría",
-  "tempestad de luden":"Compañera de Luden", "luden's tempest":"Compañera de Luden", "eco de luden":"Compañera de Luden", "luden":"Compañera de Luden",
-  "velo de la banshee":"Velo del hada de la muerte", "banshee's veil":"Velo del hada de la muerte", "banshee":"Velo del hada de la muerte",
-  "bastón de oblivión":"Orbe de Oblivión", "oblivion orb":"Orbe de Oblivión", "baston de oblivion":"Orbe de Oblivión",
-  "bastón del vacío":"Báculo del Vacío", "void staff":"Báculo del Vacío", "baston del vacio":"Báculo del Vacío",
-  "sombrero mortal de rabadon":"Sombrero mortal de Rabadon", "rabadon's deathcap":"Sombrero mortal de Rabadon", "rabadon":"Sombrero mortal de Rabadon",
-  "cayado de viento eterno":"Cayado de edades", "staff of flowing water":"Cayado de edades",
-  "reloj de arena de zhonya":"Reloj de arena de Zhonya", "zhonya's hourglass":"Reloj de arena de Zhonya", "zhonya":"Reloj de arena de Zhonya",
-  "tormento de liandry":"Tormento de Liandry", "liandry's torment":"Tormento de Liandry", "liandry":"Tormento de Liandry",
-  "perdición del liche":"Perdición del liche", "lich bane":"Perdición del liche",
-  "diente de nashor":"Diente de Nashor", "nashor's tooth":"Diente de Nashor",
-  "cetro de cristal de rylai":"Cetro de cristal de Rylai", "rylai's crystal scepter":"Cetro de cristal de Rylai", "rylai":"Cetro de cristal de Rylai",
-  "morellonomicón":"Morellonomicón", "morellonomicon":"Morellonomicón", "morello":"Morellonomicón",
-  "impulso cósmico":"Impulso cósmico", "cosmic drive":"Impulso cósmico",
+  "sombra de fuego":"4645", "shadowflame":"4645", "llamasombría":"4645", "llamasombria":"4645",
+  "tempestad de luden":"6655", "luden's tempest":"6655", "compañera de luden":"6655", "luden's companion":"6655", "luden":"6655",
+  "velo de la banshee":"3102", "banshee's veil":"3102", "velo del hada de la muerte":"3102", "banshee":"3102",
+  "bastón del vacío":"3135", "baston del vacio":"3135", "void staff":"3135", "báculo del vacío":"3135",
+  "sombrero mortal de rabadon":"3089", "rabadon's deathcap":"3089", "rabadon":"3089", "sombrero de rabadon":"3089",
+  "reloj de arena de zhonya":"3157", "zhonya's hourglass":"3157", "zhonya":"3157",
+  "tormento de liandry":"4633", "liandry's torment":"4633", "liandry's anguish":"4633", "liandry":"4633",
+  "perdición del liche":"3100", "lich bane":"3100",
+  "diente de nashor":"3115", "nashor's tooth":"3115",
+  "cetro de cristal de rylai":"3116", "rylai's crystal scepter":"3116", "rylai":"3116",
+  "morellonomicón":"3165", "morellonomicon":"3165", "morello":"3165",
+  "impulso cósmico":"4629", "cosmic drive":"4629",
+  "bastón de oblivión":"3916", "oblivion orb":"3916", "orbe de oblivión":"3916",
+  "antorcha de fuego negro":"4646", "blackfire torch":"4646",
+  "creagrietas":"4628", "riftmaker":"4628",
+  "sobrecarga tormentosa":"2501", "stormsurge":"2501",
+  "bastón de arcángel":"3003", "archangel's staff":"3003",
+  "cetro del cristal infernal":"3116", "infernal crystal scepter":"3116",
+  "brújula de ornn":"7013", "brujula de ornn":"7013",
   // AD items
-  "filo infinito":"Filo infinito", "infinity edge":"Filo infinito",
-  "escudo de malmortius":"Fauces de Malmortius", "maw of malmortius":"Fauces de Malmortius", "malmortius":"Fauces de Malmortius",
-  "filo fantasmal de youmuu":"Filo fantasmal de Youmuu", "youmuu's ghostblade":"Filo fantasmal de Youmuu", "youmuu":"Filo fantasmal de Youmuu",
-  "danza de la muerte":"Danza de la muerte", "death's dance":"Danza de la muerte",
-  "sed de sangre":"Sanguinaria", "bloodthirster":"Sanguinaria",
-  "último suspiro":"Recordatorio letal", "last whisper":"Recordatorio letal",
+  "filo infinito":"3031", "infinity edge":"3031",
+  "fauces de malmortius":"3156", "maw of malmortius":"3156", "malmortius":"3156", "escudo de malmortius":"3156",
+  "filo fantasmal de youmuu":"3142", "youmuu's ghostblade":"3142", "youmuu":"3142",
+  "danza de la muerte":"6333", "death's dance":"6333",
+  "sanguinaria":"3072", "bloodthirster":"3072", "sed de sangre":"3072",
+  "recordatorio letal":"3033", "mortal reminder":"3033",
+  "cuchilla del rey arruinado":"3153", "blade of the ruined king":"3153",
+  "el coleccionista":"6676", "the collector":"6676",
+  "navaja de asalto":"6696", "serylda's grudge":"6696", "rencor de serylda":"6696",
+  "destripador negro":"3071", "black cleaver":"3071",
+  "fuerza de la trinidad":"3078", "trinity force":"3078",
+  "hidra titánica":"3748", "titanic hydra":"3748",
+  "hidra voraz":"3074", "ravenous hydra":"3074",
+  "bailarín fantasma":"3046", "phantom dancer":"3046",
+  "huracán de runaan":"3085", "runaan's hurricane":"3085",
+  "lanza de shojin":"3161", "spear of shojin":"3161",
   // Tank items
-  "corazón de hielo":"Corazón de hielo", "frozen heart":"Corazón de hielo",
-  "armadura de warmog":"Armadura de Warmog", "warmog's armor":"Armadura de Warmog", "warmog":"Armadura de Warmog",
-  "capa de fuego solar":"Égida de fuego solar", "sunfire":"Égida de fuego solar",
+  "corazón de hielo":"3110", "frozen heart":"3110",
+  "armadura de warmog":"3083", "warmog's armor":"3083", "warmog":"3083",
+  "égida de fuego solar":"3068", "sunfire aegis":"3068", "capa de fuego solar":"3068",
+  "espíritu visionario":"3065", "spirit visage":"3065",
+  "omen de randuin":"3143", "randuin's omen":"3143",
+  "coraza del muerto":"6333", "dead man's plate":"6333",
+  "armadura de espinas":"3075", "thornmail":"3075",
+  "piedra gárgola":"3193", "gargoyle stoneplate":"3193",
   // Boots
-  "botas de hechicero":"Botas de hechicero", "sorcerer's shoes":"Botas de hechicero",
-  "botas de mercurio":"Botas de Mercurio", "mercury's treads":"Botas de Mercurio",
-  "tabi de acero":"Botas acorazadas", "plated steelcaps":"Botas acorazadas",
-  "botas jonias de la lucidez":"Botas jonias de la lucidez", "ionian boots":"Botas jonias de la lucidez",
-  "botas de velocidad":"Botas de Velocidad", "boots of speed":"Botas de Velocidad",
-  // Starting items
-  "anillo de doran":"Anillo de Doran", "doran's ring":"Anillo de Doran", "doran ring":"Anillo de Doran",
-  "espada de doran":"Espada de Doran", "doran's blade":"Espada de Doran",
-  "escudo de doran":"Escudo de Doran", "doran's shield":"Escudo de Doran",
-  "sello oscuro":"Sello oscuro", "dark seal":"Sello oscuro",
-  "capítulo perdido":"Capítulo Perdido", "lost chapter":"Capítulo Perdido",
+  "botas de hechicero":"3020", "sorcerer's shoes":"3020",
+  "botas de mercurio":"3111", "mercury's treads":"3111",
+  "botas acorazadas":"3047", "plated steelcaps":"3047", "tabi de acero":"3047",
+  "botas jonias de la lucidez":"3158", "ionian boots of lucidity":"3158",
+  "botas de velocidad":"1001", "boots of speed":"1001", "botas":"1001",
+  "botas de berserker":"3006", "berserker's greaves":"3006",
+  "botas de rapidez":"3009", "boots of swiftness":"3009",
+  // Starting/Component items
+  "anillo de doran":"1056", "doran's ring":"1056",
+  "espada de doran":"1055", "doran's blade":"1055",
+  "escudo de doran":"1054", "doran's shield":"1054",
+  "sello oscuro":"1082", "dark seal":"1082",
+  "capítulo perdido":"3802", "lost chapter":"3802", "capitulo perdido":"3802",
+  "tomo amplificador":"1052", "amplifying tome":"1052",
+  "anillo de poder":"1056", // alias for Doran's Ring
+  "poción de vida":"2003", "health potion":"2003",
 };
 
 function findItemId(name, itemData) {
   if (!itemData.exact) return null;
   let trimmed = name.includes(" o ") ? name.split(" o ")[0].trim() : name.trim();
-  // 0. Check alias map first
+  // 0. Check direct ID alias map first
   const aliasKey = trimmed.toLowerCase();
-  if (ITEM_ALIASES[aliasKey]) trimmed = ITEM_ALIASES[aliasKey];
+  if (ITEM_ID_ALIASES[aliasKey]) return ITEM_ID_ALIASES[aliasKey];
   // 1. Exact match
   if (itemData.exact[trimmed]) return itemData.exact[trimmed];
   // 2. Normalized exact
@@ -302,26 +342,32 @@ function ItemBadge({ name, itemData, index, color }) {
 
 function BuildRow({ label, value, itemData }) {
   if (!value) return null;
-  const extractedItems = itemData?.exact ? Object.keys(itemData.exact).filter(name => {
-    const norm = name.toLowerCase();
-    const valNorm = value.toLowerCase();
-    return valNorm.includes(norm) && norm.length > 3;
-  }).sort((a, b) => b.length - a.length).slice(0, 4) : [];
-
+  const foundIds = [];
+  const seen = new Set();
+  const valLower = value.toLowerCase();
+  for (const [alias, id] of Object.entries(ITEM_ID_ALIASES)) {
+    if (alias.length > 3 && valLower.includes(alias) && !seen.has(id)) {
+      foundIds.push(id); seen.add(id);
+    }
+  }
+  if (itemData?.exact) {
+    for (const [name, id] of Object.entries(itemData.exact)) {
+      if (name.length > 3 && valLower.includes(name.toLowerCase()) && !seen.has(id)) {
+        foundIds.push(id); seen.add(id);
+      }
+    }
+  }
   return (
     <div style={{ display:"flex", gap:12, marginBottom:10, fontSize:15, alignItems:"flex-start" }}>
       <span style={{ background:"rgba(255,255,255,0.05)", padding:"4px 12px", borderRadius:5, color:"#9a9590", fontWeight:700, fontSize:12, textTransform:"uppercase", letterSpacing:"1px", minWidth:86, flexShrink:0, textAlign:"center", marginTop:2 }}>{label}</span>
       <div>
-        {extractedItems.length > 0 && (
+        {foundIds.length > 0 && (
           <div style={{ display:"flex", flexWrap:"wrap", gap:4, marginBottom:4 }}>
-            {extractedItems.map((item, i) => {
-              const id = findItemId(item, itemData);
-              return id ? (
-                <img key={i} src={`https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/${id}.png`} alt={item} title={item}
-                  style={{ width:24, height:24, borderRadius:4, border:"1px solid rgba(255,255,255,0.1)" }}
-                  onError={(e) => { e.target.style.display="none"; }} />
-              ) : null;
-            })}
+            {foundIds.slice(0, 4).map((id, i) => (
+              <img key={i} src={`https://ddragon.leagueoflegends.com/cdn/15.6.1/img/item/${id}.png`} alt=""
+                style={{ width:24, height:24, borderRadius:4, border:"1px solid rgba(255,255,255,0.1)" }}
+                onError={(e) => { e.target.style.display="none"; }} />
+            ))}
           </div>
         )}
         <span style={{ color:"#e8e0d0", lineHeight:1.5 }}>{value}</span>
