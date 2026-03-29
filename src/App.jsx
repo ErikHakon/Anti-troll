@@ -26,10 +26,26 @@ const LANES = ["TOP","MID","JGL","ADC","SUP"];
 const LANE_ICONS = { TOP:"⚔️", MID:"🔥", JGL:"🌿", ADC:"🏹", SUP:"🛡️" };
 
 // DDragon dynamic version
-let DDRAGON_VER = "15.6.1"; // fallback
+const DDRAGON_VER_CACHE_KEY = "rc_ddragon_ver";
+const DDRAGON_VER_TTL = 60 * 60 * 1000; // 1 hora
+
+// Carga síncrona desde localStorage — elimina el race condition en el primer render
+let DDRAGON_VER = (() => {
+  try {
+    const c = JSON.parse(localStorage.getItem(DDRAGON_VER_CACHE_KEY) || "null");
+    if (c?.ver && Date.now() - c.ts < DDRAGON_VER_TTL) return c.ver;
+  } catch {}
+  return "15.6.1"; // fallback
+})();
+
 const versionReady = fetch("https://ddragon.leagueoflegends.com/api/versions.json")
   .then(r => r.json())
-  .then(v => { if (v?.[0]) DDRAGON_VER = v[0]; })
+  .then(v => {
+    if (v?.[0]) {
+      DDRAGON_VER = v[0];
+      try { localStorage.setItem(DDRAGON_VER_CACHE_KEY, JSON.stringify({ ver: v[0], ts: Date.now() })); } catch {}
+    }
+  })
   .catch(() => {});
 
 function ddragonUrl(path) {
@@ -46,6 +62,7 @@ const CHAMP_FILE_NAMES = {
   "Lee Sin":"LeeSin", "Master Yi":"MasterYi", "Miss Fortune":"MissFortune",
   "Tahm Kench":"TahmKench", "Twisted Fate":"TwistedFate", "Xin Zhao":"XinZhao",
   "Aurelion Sol":"AurelionSol", "Dr. Mundo":"DrMundo",
+  "Mel":"Mel",
 };
 
 function getChampIcon(name) {
@@ -157,14 +174,14 @@ const ITEM_NAME_ALIASES = {
   "malla de espinas":["Thornmail"],
   "malla ósea":["Dead Man's Plate"],
   "malla osea":["Dead Man's Plate"],
-  "escama cristalina":["Force of Nature"],
-  "capucha mercurial":["Mercurial Scimitar"],
+  "fuerza de la naturaleza":["Force of Nature"],
+  "cimitarra mercurial":["Mercurial Scimitar"],
   "tonada ígnea":["Oblivion Orb"],
   "tonada ignea":["Oblivion Orb"],
   "quimioterapia":["Chemtech Putrifier"],
   "sed de sangre":["Bloodthirster"],
   "anillo de poder":["Doran's Ring"],
-  "botas de imprimación":["Boots of Swiftness"],
+  "botas de velocidad":["Boots of Swiftness"],
 };
 
 // Build keyword index from DDragon data (called once after fetch)
@@ -294,6 +311,7 @@ function RunesList({ text, runeData, color }) {
 
 function ItemBadge({ name, itemData, index, color }) {
   const id = findItemId(name, itemData);
+  const displayName = (id && itemData.names?.[id]) ? itemData.names[id] : name;
   return (
     <div className="item-badge" style={{
       background:`${color}0a`, border:`1px solid ${color}25`, borderRadius:8,
@@ -305,9 +323,9 @@ function ItemBadge({ name, itemData, index, color }) {
       onMouseLeave={(e) => { e.currentTarget.style.transform="translateY(0)"; e.currentTarget.style.boxShadow="none"; }}
     >
       <span style={{ color:`${color}55`, fontSize:10, fontWeight:800 }}>{index+1}</span>
-      {id && <img src={`${ddragonUrl(`img/item/${id}.png`)}`} alt={name}
+      {id && <img src={`${ddragonUrl(`img/item/${id}.png`)}`} alt={displayName}
         style={{ width:32, height:32, borderRadius:4 }} onError={(e) => { e.target.style.display="none"; }} />}
-      {name}
+      {displayName}
     </div>
   );
 }
@@ -443,7 +461,7 @@ function PowerSpikesTimeline({ spikes }) {
 function ThreatPriority({ threats }) {
   if (!threats || threats.length === 0) return null;
   const dangerOrder = { alta: 0, media: 1, baja: 2 };
-  const sorted = [...threats].sort((a, b) => (dangerOrder[a.danger] ?? 3) - (dangerOrder[b.danger] ?? 3));
+  const sorted = [...threats].sort((a, b) => (dangerOrder[a.danger?.toLowerCase()] ?? 3) - (dangerOrder[b.danger?.toLowerCase()] ?? 3));
   const dangerColor = { alta: "#ff4d63", media: "#ff9f43", baja: "#2dd66a" };
   const dangerLabel = { alta: "ALTA", media: "MEDIA", baja: "BAJA" };
   return (
@@ -452,20 +470,20 @@ function ThreatPriority({ threats }) {
         {sorted.map((t, i) => (
           <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(0,0,0,0.25)", borderRadius:10, padding:"10px 14px" }}>
             <img src={getChampIcon(t.champion)} alt={t.champion}
-              style={{ width:36, height:36, borderRadius:6, border:`2px solid ${dangerColor[t.danger] || "#666"}` }}
+              style={{ width:36, height:36, borderRadius:6, border:`2px solid ${dangerColor[t.danger?.toLowerCase()] || "#666"}` }}
               onError={(e) => { e.target.style.display = "none"; }} />
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
                 <span style={{ fontSize:14, fontWeight:700, color:"#f0e6d2" }}>{t.champion}</span>
-                <span style={{ fontSize:10, fontWeight:800, color:dangerColor[t.danger] || "#666", background:`${dangerColor[t.danger] || "#666"}18`, padding:"2px 8px", borderRadius:4, letterSpacing:"0.5px" }}>
-                  {dangerLabel[t.danger] || t.danger}
+                <span style={{ fontSize:10, fontWeight:800, color:dangerColor[t.danger?.toLowerCase()] || "#666", background:`${dangerColor[t.danger?.toLowerCase()] || "#666"}18`, padding:"2px 8px", borderRadius:4, letterSpacing:"0.5px" }}>
+                  {dangerLabel[t.danger?.toLowerCase()] || t.danger}
                 </span>
               </div>
               <div style={{ height:4, borderRadius:2, background:"rgba(255,255,255,0.06)", overflow:"hidden" }}>
                 <div style={{
                   height:"100%", borderRadius:2,
-                  width: t.danger === "alta" ? "100%" : t.danger === "media" ? "60%" : "30%",
-                  background: dangerColor[t.danger] || "#666",
+                  width: t.danger?.toLowerCase() === "alta" ? "100%" : t.danger?.toLowerCase() === "media" ? "60%" : "30%",
+                  background: dangerColor[t.danger?.toLowerCase()] || "#666",
                   transition:"width 0.5s",
                 }} />
               </div>
@@ -556,11 +574,13 @@ function CoachTool({ user }) {
         exact[item.name] = id;
         normalized[normalize(item.name)] = id;
       }
+      const names = {}; // id → nombre ES para mostrar en UI
       for (const [id, item] of Object.entries(esData.data)) {
         exact[item.name] = id;
         normalized[normalize(item.name)] = id;
+        names[id] = item.name;
       }
-      setItemData({ exact, normalized, keywords: buildItemKeywordIndex({ exact }) });
+      setItemData({ exact, normalized, keywords: buildItemKeywordIndex({ exact }), names });
     }).catch(() => {});
 
     Promise.all([
@@ -638,7 +658,7 @@ OTROS ENEMIGOS: ${enemies.filter(Boolean).join(", ") || "No especificados"}
 
 IMPORTANTE: Tené en cuenta la composición de MI equipo para decidir la build. Si mi equipo ya tiene tanque, puedo buildear más agresivo. Si un aliado tiene anti-heal, no lo necesito yo. Si soy el único frontline, priorizo tanqueo. Analizá la sinergia y cómo mi build la potencia.
 
-IMPORTANTE: Usá los nombres de ítems EXACTOS en ESPAÑOL como aparecen en el cliente del juego (ejemplo: 'Tempestad de Luden', 'Botas de hechicero', 'Sombra de Fuego'). NO uses nombres en inglés.
+IMPORTANTE: Usá los nombres de ítems EXACTOS en INGLÉS tal como aparecen en el cliente del juego (ej: 'Infinity Edge', 'Rabadon's Deathcap', 'Trinity Force'). NO traduzcas los nombres de items. (Las runas sí en español, solo los items en inglés.)
 Usá los nombres de runas en ESPAÑOL (ejemplo: 'Electrocutar', 'Cosecha oscura', 'Conquistador').
 
 Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estructura exacta:
@@ -700,8 +720,9 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
       }
       const data = await res.json();
       const text = data.content?.map(i => i.text || "").join("\n") || "";
-      const clean = text.replace(/```json|```/g,"").trim();
+      const clean = text.replace(/^`{3,}(json)?/im, "").replace(/`{3,}$/m, "").trim();
       const parsed = JSON.parse(clean);
+      if (!parsed.laning_build || !parsed.teamfight_build) throw new Error("Respuesta incompleta de la IA. Intentá de nuevo.");
       setResult(parsed);
       try { localStorage.setItem(cacheKey, JSON.stringify({ data: parsed, ts: Date.now() })); } catch {}
       // Save generation to Supabase (non-blocking)
@@ -1078,7 +1099,7 @@ export default function App() {
         }
 
         // If email confirmation is disabled, user is logged in immediately
-        if (data.user && !data.user.identities?.length === 0) {
+        if (data.user && data.user.identities?.length === 0) {
           setAuthError("Este email ya está registrado. Intentá iniciar sesión.");
         } else {
           setPage("home");
@@ -1107,8 +1128,9 @@ export default function App() {
       setAuthForm({ email:"", password:"", username:"", region:"LAS" });
     } catch (err) {
       setAuthError("Error de conexión. Intentá de nuevo.");
+    } finally {
+      setAuthLoading(false);
     }
-    setAuthLoading(false);
   };
 
   const translateAuthError = (msg) => {
