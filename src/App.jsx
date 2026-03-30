@@ -406,7 +406,7 @@ function WinConditionCard({ text }) {
       <div style={{ position:"absolute", top:-20, right:-20, width:80, height:80, borderRadius:"50%", background:"radial-gradient(circle, rgba(255,215,0,0.15) 0%, transparent 70%)", pointerEvents:"none" }} />
       <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:12, position:"relative" }}>
         <span style={{ fontSize:32 }}>🏆</span>
-        <span style={{ fontSize:17, fontWeight:800, color:"#ffd700", textTransform:"uppercase", letterSpacing:"1.5px" }}>Win Condition</span>
+        <span style={{ fontSize:17, fontWeight:800, color:"#ffd700", textTransform:"uppercase", letterSpacing:"1.5px" }}>Condición de Victoria</span>
       </div>
       <p style={{ margin:0, fontSize:16, fontWeight:700, color:"#ffd700", lineHeight:1.6, position:"relative" }}>{text}</p>
     </div>
@@ -423,7 +423,7 @@ function PowerSpikesTimeline({ spikes }) {
   });
   return (
     <div style={{ padding:"16px 0 8px", marginBottom:8 }}>
-      <div style={{ fontSize:13, fontWeight:700, color:"#2dd66a", textTransform:"uppercase", letterSpacing:"1px", marginBottom:16 }}>⚡ Power Spikes</div>
+      <div style={{ fontSize:13, fontWeight:700, color:"#2dd66a", textTransform:"uppercase", letterSpacing:"1px", marginBottom:16 }}>⚡ Picos de Poder</div>
       <div style={{ position:"relative", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 20px" }}>
         <div style={{ position:"absolute", left:20, right:20, top:"50%", height:2, background:"linear-gradient(90deg, #ff4d63, #ffd700, #12d9f5)", transform:"translateY(-1px)", zIndex:0 }} />
         {spikes.map((spike, i) => (
@@ -465,7 +465,7 @@ function ThreatPriority({ threats }) {
   const dangerColor = { alta: "#ff4d63", media: "#ff9f43", baja: "#2dd66a" };
   const dangerLabel = { alta: "ALTA", media: "MEDIA", baja: "BAJA" };
   return (
-    <ResultSection icon="⚠️" title="Threat Priority" color="#ff4d63">
+    <ResultSection icon="⚠️" title="Prioridad de Amenazas" color="#ff4d63">
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         {sorted.map((t, i) => (
           <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(0,0,0,0.25)", borderRadius:10, padding:"10px 14px" }}>
@@ -540,7 +540,7 @@ function CombosCard({ combos }) {
 function WardSpotsCard({ text }) {
   if (!text) return null;
   return (
-    <ResultSection icon="👁️" title="Ward Spots" color="#2dd66a">
+    <ResultSection icon="👁️" title="Spots de Ward" color="#2dd66a">
       <p style={{ margin:0, color:"#c8c0b0", fontSize:14, lineHeight:1.6 }}>{text}</p>
     </ResultSection>
   );
@@ -952,14 +952,14 @@ function CoachTool({ user }) {
           <CombosCard combos={result.combos} />
 
           {/* 10. Game Plan (con Power Spikes timeline arriba) */}
-          <ResultSection icon="🗺️" title="Game Plan" color="#2dd66a">
+          <ResultSection icon="🗺️" title="Plan de Juego" color="#2dd66a">
             <PowerSpikesTimeline spikes={result.power_spikes} />
             <PhaseBlock label="Early (1-6)" text={result.game_plan?.early} color="#ff4d63" />
             <PhaseBlock label="Mid Game" text={result.game_plan?.mid} color="#d4a843" />
             <PhaseBlock label="Late Game" text={result.game_plan?.late} color="#12d9f5" />
             {result.game_plan?.tips?.length > 0 && (
               <div style={{ marginTop:14, background:"rgba(45,214,106,0.08)", border:"1px solid rgba(45,214,106,0.2)", borderRadius:10, padding:16 }}>
-                <div style={{ fontSize:13, color:"#2dd66a", fontWeight:700, marginBottom:10, textTransform:"uppercase", letterSpacing:"1px" }}>Pro Tips</div>
+                <div style={{ fontSize:13, color:"#2dd66a", fontWeight:700, marginBottom:10, textTransform:"uppercase", letterSpacing:"1px" }}>Consejos Pro</div>
                 {result.game_plan.tips.map((tip, i) => (
                   <div key={i}>
                     <div style={{ display:"flex", gap:8, padding:"8px 0", fontSize:14, color:"#c8c0b0", lineHeight:1.5 }}>

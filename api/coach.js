@@ -29,6 +29,9 @@ INSTRUCCIONES DE RUNAS:
 - Formato exacto del campo "secondary": "Árbol [NombreÁrbol]. Runas: [Runa1, Runa2]"
 - Keystones disponibles en español: Electrocutar, Cosecha oscura, Depredador, Poro fantasmal, Conquistador, Ritmo letal, Piedra de afilar, Emboscada, Paso de tormenta, Eje de mana, Invocación de Aery, Cometa arcano, Fase de la Luna, Guardián, Glacial reforzado, Mente inalterable, Resolución de Grasp
 
+INSTRUCCIONES DE VOCABULARIO:
+- En los textos sobre wards, usá el verbo "wardear" conjugado correctamente en español (ej: "wardeá el río", "wardear el objetivo", "wardeando la base enemiga"). NUNCA uses "warden" ni "warding".
+
 FORMATO DE RESPUESTA:
 Respondé SOLO con un JSON válido. Sin markdown, sin backticks, sin texto antes o después del JSON.
 Usá esta estructura exacta:

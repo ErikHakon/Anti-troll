@@ -1,4 +1,4 @@
-# ⚡ Anti-Troll (Rift Coach AI)
+# ⚡ UnTroll (Rift Coach AI)
 
 Coaching inteligente para League of Legends con Inteligencia Artificial.
 
