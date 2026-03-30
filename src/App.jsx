@@ -610,7 +610,7 @@ function CoachTool({ user }) {
     }); // end versionReady.then
   }, []);
 
-  const msgs = ["Analizando composición enemiga...","Evaluando sinergia de equipo...","Optimizando build contextual...","Generando game plan completo..."];
+  const msgs = ["Analizando composición enemiga...","Evaluando sinergia de equipo...","Optimizando build contextual...","Generando game plan completo...","♻️ Reintentando análisis..."];
   useEffect(() => {
     if (!loading) return;
     const iv = setInterval(() => setLoadingMsg(p => (p+1) % msgs.length), 2500);
@@ -649,82 +649,80 @@ function CoachTool({ user }) {
     }
 
     const allyList = allies.filter(Boolean);
-    const prompt = `Sos un coach challenger de League of Legends. Analizá esta partida y dame un game plan completo EN ESPAÑOL. Considerá TANTO la composición enemiga COMO la de mi equipo.
+    const enemyList = enemies.filter(Boolean);
 
-MI CAMPEÓN: ${myChamp} (${myLane})${buildType === "ad" ? "\nTIPO DE BUILD FORZADO: AD (Attack Damage). Toda la build debe ser AD, no recomiendes items AP." : buildType === "ap" ? "\nTIPO DE BUILD FORZADO: AP (Ability Power). Toda la build debe ser AP, no recomiendes items AD." : buildType === "hybrid" ? "\nTIPO DE BUILD FORZADO: HÍBRIDO. La build debe mezclar items AD y AP para maximizar ambos tipos de daño." : ""}
-MIS ALIADOS: ${allyList.length > 0 ? allyList.join(", ") : "No especificados"}
-OPONENTE DE LÍNEA: ${laneOpponent}
-OTROS ENEMIGOS: ${enemies.filter(Boolean).join(", ") || "No especificados"}
-
-IMPORTANTE: Tené en cuenta la composición de MI equipo para decidir la build. Si mi equipo ya tiene tanque, puedo buildear más agresivo. Si un aliado tiene anti-heal, no lo necesito yo. Si soy el único frontline, priorizo tanqueo. Analizá la sinergia y cómo mi build la potencia.
-
-IMPORTANTE: Usá los nombres de ítems EXACTOS en INGLÉS tal como aparecen en el cliente del juego (ej: 'Infinity Edge', 'Rabadon's Deathcap', 'Trinity Force'). NO traduzcas los nombres de items. (Las runas sí en español, solo los items en inglés.)
-Usá los nombres de runas en ESPAÑOL (ejemplo: 'Electrocutar', 'Cosecha oscura', 'Conquistador').
-
-Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estructura exacta:
-{
-  "matchup_summary": "Resumen corto del matchup de línea (2-3 oraciones)",
-  "damage_analysis": "Análisis del tipo de daño del equipo enemigo",
-  "team_synergy": "Análisis de tu equipo: qué rol cumplís, qué le falta a tu comp, cómo tu build complementa",
-  "laning_build": {
-    "starter": "Item inicial + consumibles",
-    "first_back": "Item de primer recall",
-    "core_laning": "1-2 items para ganar la línea",
-    "boots": "Botas recomendadas y por qué",
-    "items": ["item_inicial","item_primer_recall","core_item1","botas"],
-    "explanation": "Por qué estos items contra este matchup"
-  },
-  "teamfight_build": {
-    "full_build": ["item1","item2","item3","item4","item5","item6"],
-    "build_order": "Orden de compra considerando AMBOS equipos",
-    "situational": "Items situacionales si el juego cambia"
-  },
-  "runes": {
-    "primary": "Árbol + keystones",
-    "secondary": "Árbol secundario + runas",
-    "explanation": "Por qué estas runas contra esta comp"
-  },
-  "game_plan": {
-    "early": "Cómo jugar la fase de línea (niveles 1-6)",
-    "mid": "Qué hacer en mid game con tu equipo",
-    "late": "Win condition del late game con tu comp",
-    "tips": ["tip1","tip2","tip3"]
-  },
-  "win_condition": "Una oración clara tipo 'Ganás esta partida si...' explicando la condición de victoria",
-  "power_spikes": [
-    { "timing": "Nivel 2", "description": "Por qué sos fuerte en este punto" },
-    { "timing": "Nivel 6 + Lost Chapter", "description": "..." },
-    { "timing": "2 items", "description": "..." }
-  ],
-  "threat_priority": [
-    { "champion": "NombreChamp", "danger": "alta/media/baja", "reason": "Por qué es peligroso para vos" }
-  ],
-  "combos": {
-    "trading": "Combo corto para tradear en línea (ej: Q > AA > E > retroceder)",
-    "all_in": "Combo completo para all-in o kill",
-    "teamfight": "Qué hacer en teamfight (ej: R para engage, W para peel, focus al carry)"
-  },
-  "ward_spots": "Dónde wardear según la fase del juego y el matchup"
-}`;
-    try {
+    // Extracts, parses and validates one response from the API
+    async function attemptFetch() {
       const res = await fetch("/api/coach", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ prompt }),
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          champion: myChamp,
+          lane: myLane,
+          buildType,
+          laneOpponent,
+          allies: allyList,
+          enemies: enemyList,
+        }),
       });
+
       if (!res.ok) {
         if (res.status === 504) {
           throw new Error("La IA tardó demasiado. Intentá con menos campeones opcionales o probá de nuevo.");
         }
+        if (res.status === 422) {
+          const errData = await res.json().catch(() => ({}));
+          if (errData.error === "max_tokens_exceeded") {
+            throw new Error("La respuesta fue muy larga. Intentá con menos campeones seleccionados.");
+          }
+        }
         const errData = await res.json().catch(() => ({}));
         throw new Error(errData.error?.message || errData.error || `Error del servidor (${res.status})`);
       }
+
       const data = await res.json();
       const text = data.content?.map(i => i.text || "").join("\n") || "";
-      const clean = text.replace(/^`{3,}(json)?/im, "").replace(/`{3,}$/m, "").trim();
-      const parsed = JSON.parse(clean);
-      if (!parsed.laning_build || !parsed.teamfight_build) throw new Error("Respuesta incompleta de la IA. Intentá de nuevo.");
+
+      // Robust JSON extraction: find outermost braces
+      const firstBrace = text.indexOf("{");
+      const lastBrace = text.lastIndexOf("}");
+      if (firstBrace === -1 || lastBrace === -1) {
+        throw new SyntaxError("La IA no devolvió un JSON válido");
+      }
+      const parsed = JSON.parse(text.slice(firstBrace, lastBrace + 1));
+
+      if (!parsed.laning_build || !parsed.teamfight_build) {
+        throw new SyntaxError("Respuesta incompleta de la IA. Intentá de nuevo.");
+      }
+
+      // FIX 4 — Defensive type coercion for array fields
+      if (!Array.isArray(parsed.power_spikes))             parsed.power_spikes = [];
+      if (!Array.isArray(parsed.threat_priority))           parsed.threat_priority = [];
+      if (!Array.isArray(parsed.laning_build?.items))       parsed.laning_build.items = [];
+      if (!Array.isArray(parsed.teamfight_build?.full_build)) parsed.teamfight_build.full_build = [];
+      if (parsed.game_plan && !Array.isArray(parsed.game_plan.tips)) parsed.game_plan.tips = [];
+
+      return { parsed, tokensUsed: data.usage?.output_tokens || null };
+    }
+
+    try {
+      let result;
+      try {
+        result = await attemptFetch();
+      } catch (parseErr) {
+        // FIX 5 — Retry once on JSON parse/validation errors only
+        if (parseErr instanceof SyntaxError) {
+          setLoadingMsg(4); // "♻️ Reintentando análisis..."
+          result = await attemptFetch();
+        } else {
+          throw parseErr; // Server errors, network errors — don't retry
+        }
+      }
+
+      const { parsed, tokensUsed } = result;
       setResult(parsed);
       try { localStorage.setItem(cacheKey, JSON.stringify({ data: parsed, ts: Date.now() })); } catch {}
+
       // Save generation to Supabase (non-blocking)
       if (user?.id) {
         supabase.from("generations").insert({
@@ -732,16 +730,16 @@ Respondé SOLO con un JSON válido (sin markdown, sin backticks) con esta estruc
           champion: myChamp,
           lane: myLane,
           opponent: laneOpponent,
-          allies: allies.filter(Boolean),
-          enemies: enemies.filter(Boolean),
+          allies: allyList,
+          enemies: enemyList,
           build_type: buildType,
           result: parsed,
-          tokens_used: data.usage?.output_tokens || null,
+          tokens_used: tokensUsed,
         }).then(({ error: dbErr }) => {
           if (dbErr) console.warn("Error saving generation:", dbErr.message);
         });
       }
-    } catch(err) {
+    } catch (err) {
       console.error(err);
       setError(err.message || "Error al generar el análisis. Intentá de nuevo.");
     } finally { setLoading(false); }
