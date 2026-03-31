@@ -185,21 +185,22 @@ const ITEM_NAME_ALIASES = {
 // Build keyword index from DDragon data (called once after fetch)
 function buildItemKeywordIndex(itemData) {
   const stopWords = new Set(["de","del","la","el","los","las","un","una","y","o","the","of","a","and","s","to","in","en"]);
-  const keywordIndex = {}; // keyword → itemId
+  const keywordIndex = {}; // keyword → itemId[]
   
-  for (const [name, id] of Object.entries(itemData.exact)) {
+  const allExact = { ...itemData.exactEN, ...itemData.exactES };
+  for (const [name, id] of Object.entries(allExact)) {
     const words = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
       .split(/[\s']+/).filter(w => w.length >= 4 && !stopWords.has(w));
     for (const w of words) {
-      // Only index "unique-ish" words (proper nouns, distinctive words)
-      if (!keywordIndex[w]) keywordIndex[w] = id;
+      if (!keywordIndex[w]) keywordIndex[w] = [];
+      if (!keywordIndex[w].includes(id)) keywordIndex[w].push(id);
     }
   }
   return keywordIndex;
 }
 
 function findItemId(name, itemData) {
-  if (!itemData.exact) return null;
+  if (!itemData.exactEN) return null;
   let trimmed = name.includes(" o ") ? name.split(" o ")[0].trim() : name.trim();
   
   // 0. Check alias map
@@ -207,16 +208,20 @@ function findItemId(name, itemData) {
   const candidates = ITEM_NAME_ALIASES[aliasKey];
   if (candidates) {
     for (const candidate of candidates) {
-      if (itemData.exact[candidate]) return itemData.exact[candidate];
+      if (itemData.exactEN[candidate]) return itemData.exactEN[candidate];
+      if (itemData.exactES[candidate]) return itemData.exactES[candidate];
       const nc = normalize(candidate);
-      if (itemData.normalized[nc]) return itemData.normalized[nc];
+      if (itemData.normEN[nc]) return itemData.normEN[nc];
+      if (itemData.normES[nc]) return itemData.normES[nc];
     }
   }
-  // 1. Exact match
-  if (itemData.exact[trimmed]) return itemData.exact[trimmed];
+  // 1. Exact match (EN first, more reliable)
+  if (itemData.exactEN[trimmed]) return itemData.exactEN[trimmed];
+  if (itemData.exactES[trimmed]) return itemData.exactES[trimmed];
   // 2. Normalized exact
   const norm = normalize(trimmed);
-  if (itemData.normalized[norm]) return itemData.normalized[norm];
+  if (itemData.normEN[norm]) return itemData.normEN[norm];
+  if (itemData.normES[norm]) return itemData.normES[norm];
   // 3. Keyword match: extract words from name, check keyword index
   if (itemData.keywords) {
     const stopWords = new Set(["de","del","la","el","los","las","un","una","y","o","the","of","a","and","s"]);
@@ -224,7 +229,7 @@ function findItemId(name, itemData) {
     // Try longest/most unique words first
     const sorted = [...words].sort((a, b) => b.length - a.length);
     for (const w of sorted) {
-      if (itemData.keywords[w]) return itemData.keywords[w];
+      if (itemData.keywords[w]) return itemData.keywords[w][0];
     }
   }
   return null;
@@ -238,7 +243,8 @@ function findRuneIcon(name, runeData) {
   if (runeData.normalized[norm]) return runeData.normalized[norm];
   const normKeys = Object.keys(runeData.normalized);
   for (const k of normKeys) {
-    if (k.includes(norm) || norm.includes(k)) return runeData.normalized[k];
+    // Only allow substring matching for long, distinctive terms
+    if (k === norm || (norm.length > 6 && k.includes(norm))) return runeData.normalized[k];
   }
   return null;
 }
@@ -324,7 +330,9 @@ function RunesList({ text, runeData, color }) {
   // Find individual runes (not trees)
   const found = allNames.filter(rn => {
     if (allTrees.some(t => t.toLowerCase() === rn.toLowerCase())) return false;
-    return text.toLowerCase().includes(rn.toLowerCase()) && rn.length > 2;
+    // Word boundary regex for higher accuracy
+    const regex = new RegExp(`\\b${rn.toLowerCase().replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&')}\\b`);
+    return regex.test(text.toLowerCase()) && rn.length > 3;
   });
   
   // Deduplicate by normalized name
@@ -442,6 +450,7 @@ function WinConditionCard({ text }) {
 }
 
 function PowerSpikesTimeline({ spikes }) {
+  const [expanded, setExpanded] = useState(null);
   if (!spikes || spikes.length === 0) return null;
   const colors = spikes.map((_, i) => {
     const ratio = spikes.length === 1 ? 0.5 : i / (spikes.length - 1);
@@ -461,22 +470,17 @@ function PowerSpikesTimeline({ spikes }) {
               style={{
                 width:18, height:18, borderRadius:"50%", background:colors[i],
                 boxShadow:`0 0 12px ${colors[i]}60`, cursor:"pointer", transition:"all 0.3s", position:"relative",
+                transform: expanded === i ? "scale(1.5)" : "scale(1)",
               }}
-              title={spike.description}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "scale(1.5)";
-                e.currentTarget.style.boxShadow = `0 0 20px ${colors[i]}`;
-                const desc = e.currentTarget.nextSibling;
-                if (desc) { desc.style.opacity = "1"; desc.style.maxHeight = "100px"; }
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "scale(1)";
-                e.currentTarget.style.boxShadow = `0 0 12px ${colors[i]}60`;
-                const desc = e.currentTarget.nextSibling;
-                if (desc) { desc.style.opacity = "0"; desc.style.maxHeight = "0"; }
-              }}
+              onClick={() => setExpanded(expanded === i ? null : i)}
+              onMouseEnter={() => setExpanded(i)}
+              onMouseLeave={() => setExpanded(null)}
             />
-            <div style={{ fontSize:12, color:"#c8c0b0", textAlign:"center", maxWidth:140, lineHeight:1.4, overflow:"hidden", maxHeight:0, opacity:0, transition:"all 0.3s" }}>
+            <div style={{ 
+              fontSize:12, color:"#c8c0b0", textAlign:"center", maxWidth:140, lineHeight:1.4, 
+              overflow:"hidden", maxHeight: expanded === i ? 100 : 0, opacity: expanded === i ? 1 : 0, 
+              transition:"all 0.3s", marginTop: 4
+            }}>
               {spike.description}
             </div>
           </div>
@@ -566,7 +570,7 @@ function CombosCard({ combos }) {
 function WardSpotsCard({ text }) {
   if (!text) return null;
   return (
-    <ResultSection icon="👁️" title="Spots de Ward" color="#2dd66a">
+    <ResultSection icon="👁️" title="Ward Spots" color="#2dd66a">
       <p style={{ margin:0, color:"#c8c0b0", fontSize:14, lineHeight:1.6 }}>{text}</p>
     </ResultSection>
   );
@@ -583,6 +587,7 @@ function CoachTool({ user }) {
   const [allyLanes, setAllyLanes] = useState([null,null,null,null]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
+  const [laneWarning, setLaneWarning] = useState(false);
   const [error, setError] = useState(null);
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [itemData, setItemData] = useState({});
@@ -592,24 +597,26 @@ function CoachTool({ user }) {
 
   useEffect(() => {
     versionReady.then(() => {
-    Promise.all([
-      fetch(ddragonUrl("data/en_US/item.json")).then(r => r.json()),
-      fetch(ddragonUrl("data/es_ES/item.json")).then(r => r.json()),
-    ]).then(([enData, esData]) => {
-      const exact = {};
-      const normalized = {};
-      for (const [id, item] of Object.entries(enData.data)) {
-        exact[item.name] = id;
-        normalized[normalize(item.name)] = id;
-      }
-      const names = {}; // id → nombre ES para mostrar en UI
-      for (const [id, item] of Object.entries(esData.data)) {
-        exact[item.name] = id;
-        normalized[normalize(item.name)] = id;
-        names[id] = item.name;
-      }
-      setItemData({ exact, normalized, keywords: buildItemKeywordIndex({ exact }), names });
-    }).catch(() => {});
+      Promise.all([
+        fetch(ddragonUrl("data/en_US/item.json")).then(r => r.json()),
+        fetch(ddragonUrl("data/es_ES/item.json")).then(r => r.json()),
+      ]).then(([enData, esData]) => {
+        const exactEN = {};
+        const normEN = {};
+        for (const [id, item] of Object.entries(enData.data)) {
+          exactEN[item.name] = id;
+          normEN[normalize(item.name)] = id;
+        }
+        const exactES = {};
+        const normES = {};
+        const names = {}; // id → nombre ES para mostrar en UI
+        for (const [id, item] of Object.entries(esData.data)) {
+          exactES[item.name] = id;
+          normES[normalize(item.name)] = id;
+          names[id] = item.name;
+        }
+        setItemData({ exactEN, exactES, normEN, normES, keywords: buildItemKeywordIndex({ exactEN, exactES }), names });
+      }).catch(() => {});
 
     Promise.all([
       fetch(ddragonUrl("data/en_US/runesReforged.json")).then(r => r.json()),
@@ -637,6 +644,18 @@ function CoachTool({ user }) {
     }).catch(() => {});
     }); // end versionReady.then
   }, []);
+  
+  const handleLaneChange = (l) => {
+    if (l === myLane) return;
+    setMyLane(l);
+    setResult(null);
+    setAllies([null,null,null,null]);
+    setEnemies([null,null,null,null]);
+    setAllyLanes([null,null,null,null]);
+    setEnemyLanes([null,null,null,null]);
+    setLaneWarning(true);
+    setTimeout(() => setLaneWarning(false), 3000);
+  };
 
   const msgs = ["Analizando composición enemiga...","Evaluando sinergia de equipo...","Optimizando build contextual...","Generando game plan completo...","♻️ Reintentando análisis..."];
   useEffect(() => {
@@ -749,7 +768,29 @@ function CoachTool({ user }) {
 
       const { parsed, tokensUsed } = result;
       setResult(parsed);
-      try { localStorage.setItem(cacheKey, JSON.stringify({ data: parsed, ts: Date.now() })); } catch {}
+      const setCachedResult = (key, val) => {
+        try {
+          localStorage.setItem(key, JSON.stringify({ data: val, ts: Date.now() }));
+        } catch (e) {
+          if (e.name === 'QuotaExceededError' || e.name === 'NS_ERROR_DOM_QUOTA_REACHED') {
+            const keys = [];
+            for (let i = 0; i < localStorage.length; i++) {
+              const k = localStorage.key(i);
+              if (k.startsWith('rc_cache_')) {
+                try {
+                  const item = JSON.parse(localStorage.getItem(k));
+                  keys.push({ k, ts: item.ts || 0 });
+                } catch { keys.push({ k, ts: 0 }); }
+              }
+            }
+            keys.sort((a, b) => a.ts - b.ts);
+            // Remove oldest 20 entries
+            keys.slice(0, 20).forEach(x => localStorage.removeItem(x.k));
+            try { localStorage.setItem(key, JSON.stringify({ data: val, ts: Date.now() })); } catch {}
+          }
+        }
+      };
+      setCachedResult(cacheKey, parsed);
 
       // Save generation to Supabase (non-blocking)
       if (user?.id) {
@@ -782,9 +823,14 @@ function CoachTool({ user }) {
           <div style={{ flex:1 }}>
             <ChampionPicker value={myChamp} onChange={setMyChamp} champions={availableFor(myChamp)} placeholder="Seleccioná tu campeón" />
           </div>
-          <div className="lane-selector" style={{ display:"flex", gap:3, background:"rgba(0,0,0,0.35)", borderRadius:8, padding:4, alignItems:"center" }}>
+          <div className="lane-selector" style={{ display:"flex", gap:3, background:"rgba(0,0,0,0.35)", borderRadius:8, padding:4, alignItems:"center", position:"relative" }}>
+            {laneWarning && (
+              <div style={{ position:"absolute", top:-38, left:"50%", transform:"translateX(-50%)", background:"#ff9f43", color:"#000", padding:"4px 12px", borderRadius:6, fontSize:11, fontWeight:800, whiteSpace:"nowrap", animation:"fadeIn 0.3s" }}>
+                ⚠️ Carril cambiado — revisá tu equipo
+              </div>
+            )}
             {LANES.map(l => (
-              <button key={l} onClick={() => setMyLane(l)} style={{
+              <button key={l} onClick={() => handleLaneChange(l)} style={{
                 background: myLane===l ? "rgba(200,155,60,0.25)":"transparent",
                 border: myLane===l ? "1px solid rgba(200,155,60,0.4)":"1px solid transparent",
                 color: myLane===l ? "#d4a843":"#6a6a6a", borderRadius:6, padding:"8px 10px",
@@ -982,14 +1028,14 @@ function CoachTool({ user }) {
           <CombosCard combos={result.combos} />
 
           {/* 10. Game Plan (con Power Spikes timeline arriba) */}
-          <ResultSection icon="🗺️" title="Plan de Juego" color="#2dd66a">
+          <ResultSection icon="🗺️" title="Game Plan" color="#2dd66a">
             <PowerSpikesTimeline spikes={result.power_spikes} />
             <PhaseBlock label="Early (1-6)" text={result.game_plan?.early} color="#ff4d63" />
             <PhaseBlock label="Mid Game" text={result.game_plan?.mid} color="#d4a843" />
             <PhaseBlock label="Late Game" text={result.game_plan?.late} color="#12d9f5" />
             {result.game_plan?.tips?.length > 0 && (
               <div style={{ marginTop:14, background:"rgba(45,214,106,0.08)", border:"1px solid rgba(45,214,106,0.2)", borderRadius:10, padding:16 }}>
-                <div style={{ fontSize:13, color:"#2dd66a", fontWeight:700, marginBottom:10, textTransform:"uppercase", letterSpacing:"1px" }}>Consejos Pro</div>
+                <div style={{ fontSize:13, color:"#2dd66a", fontWeight:700, marginBottom:10, textTransform:"uppercase", letterSpacing:"1px" }}>Pro Tips</div>
                 {result.game_plan.tips.map((tip, i) => (
                   <div key={i}>
                     <div style={{ display:"flex", gap:8, padding:"8px 0", fontSize:14, color:"#c8c0b0", lineHeight:1.5 }}>
@@ -1311,7 +1357,7 @@ export default function App() {
         <div style={{ maxWidth:1200, margin:"0 auto", display:"flex", alignItems:"center", justifyContent:"space-between", height:64 }}>
           <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setPage("home"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>
             <div style={{ width:32, height:32, background:"linear-gradient(135deg,#c89b3c,#785a28)", borderRadius:7, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>⚡</div>
-            <span style={{ fontSize:18, fontWeight:900, color:"#f0e6d2", letterSpacing:"-0.5px" }}>RIFT COACH</span>
+            <span style={{ fontSize:18, fontWeight:900, color:"#f0e6d2", letterSpacing:"-0.5px" }}>UNTROLL</span>
             <span style={{ fontSize:11, fontWeight:700, color:"#c89b3c", background:"rgba(200,155,60,0.12)", padding:"2px 8px", borderRadius:4, letterSpacing:"1px" }}>AI</span>
           </div>
           <button className="hamburger" onClick={() => setMobileMenu(!mobileMenu)}>
