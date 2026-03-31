@@ -650,7 +650,7 @@ function CoachTool({ user }) {
   const setEnemy = (i, v) => { const c = [...enemies]; c[i] = v; setEnemies(c); };
   const setAlly = (i, v) => { const c = [...allies]; c[i] = v; setAllies(c); };
   const canGenerate = myChamp && laneOpponent;
-  const otherLanes = LANES.filter(l => l !== myLane);
+
 
   function getCacheKey() {
     const parts = [myChamp, myLane, buildType, laneOpponent, ...allies.filter(Boolean).sort(), ...enemies.filter(Boolean).sort()];
