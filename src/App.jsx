@@ -96,8 +96,7 @@ function ChampionPicker({ value, onChange, champions, placeholder, accentColor =
         display:"flex", alignItems:"center", gap:10, minHeight:52, transition:"all 0.2s",
       }}>
         {value ? (<>
-          <img src={getChampIcon(value)} alt={value} style={{ width:32, height:32, borderRadius:4 }}
-            onError={(e) => { e.target.style.display = "none"; }} />
+          <ChampPortrait name={value} size={32} />
           <span style={{ color:"#f0e6d2", fontSize:15, fontWeight:600 }}>{value}</span>
           <span onClick={(e) => { e.stopPropagation(); onChange(null); }}
             style={{ marginLeft:"auto", color:"#555", cursor:"pointer", fontSize:16 }}>✕</span>
@@ -128,8 +127,7 @@ function ChampionPicker({ value, onChange, champions, placeholder, accentColor =
                 onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(200,155,60,0.12)"; e.currentTarget.style.color = "#f0e6d2"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#c8c0b0"; }}
               >
-                <img src={getChampIcon(c)} alt={c} style={{ width:28, height:28, borderRadius:3 }}
-                  onError={(e) => { e.target.style.display = "none"; }} />
+                <ChampPortrait name={c} size={28} />
                 {c}
               </div>
             ))}
@@ -245,6 +243,52 @@ function findRuneIcon(name, runeData) {
   return null;
 }
 
+function ChampPortrait({ name, size = 32, border = "none", shadow = "none", style = {} }) {
+  const [error, setError] = useState(false);
+  const iconUrl = getChampIcon(name);
+
+  if (error || !name) {
+    const initial = name ? name.charAt(0) : "?";
+    return (
+      <div style={{ 
+        width: size, height: size, borderRadius: size/8, 
+        background: "linear-gradient(135deg, #1e2328, #111)", 
+        border, boxShadow: shadow,
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: "#c89b3c", fontSize: size/2, fontWeight: 800, fontFamily: "serif",
+        flexShrink: 0, ...style
+      }}>
+        {initial}
+      </div>
+    );
+  }
+
+  return (
+    <img src={iconUrl} alt={name} 
+      style={{ width: size, height: size, borderRadius: size/8, border, boxShadow: shadow, objectFit: "cover", flexShrink: 0, ...style }}
+      onError={() => setError(true)} />
+  );
+}
+
+function MiniLaneSelector({ value, onChange }) {
+  return (
+    <div style={{ display:"flex", gap:2, background:"rgba(0,0,0,0.3)", borderRadius:6, padding:2, width:"fit-content" }}>
+      {LANES.map(l => (
+        <button key={l} onClick={() => onChange(value === l ? null : l)} style={{
+          background: value === l ? "rgba(200,155,60,0.2)" : "transparent",
+          border: "none", color: value === l ? "#d4a843" : "#444",
+          borderRadius:4, width:24, height:24, cursor:"pointer", fontSize:12,
+          display:"flex", alignItems:"center", justifyContent:"center", transition:"0.2s",
+          padding: 0
+        }} title={l}>
+          {LANE_ICONS[l]}
+        </button>
+      ))}
+      {!value && <span style={{ color:"#444", fontSize:10, marginLeft:4, alignSelf:"center", fontWeight:800 }}>?</span>}
+    </div>
+  );
+}
+
 function RuneBadge({ name, runeData, color }) {
   const icon = findRuneIcon(name, runeData);
   return (
@@ -331,38 +375,22 @@ function ItemBadge({ name, itemData, index, color }) {
 }
 
 function BuildRow({ label, value, itemData }) {
-  if (!value) return null;
+  if (!value || !itemData?.exact) return null;
   const foundIds = [];
   const seen = new Set();
-  const valLower = value.toLowerCase();
-  if (itemData?.exact) {
-    // 1. Check aliases
-    for (const [alias, candidates] of Object.entries(ITEM_NAME_ALIASES)) {
-      if (alias.length > 3 && valLower.includes(alias)) {
-        for (const candidate of candidates) {
-          const id = itemData.exact[candidate] || itemData.normalized[normalize(candidate)];
-          if (id && !seen.has(id)) { foundIds.push(id); seen.add(id); break; }
-        }
-      }
-    }
-    // 2. Check DDragon names directly
-    for (const [name, id] of Object.entries(itemData.exact)) {
-      if (name.length > 3 && valLower.includes(name.toLowerCase()) && !seen.has(id)) {
-        foundIds.push(id); seen.add(id);
-      }
-    }
-    // 3. Keyword matching from text
-    if (itemData.keywords) {
-      const stopWords = new Set(["de","del","la","el","los","las","un","una","y","o","the","of","a","and","s","para","con","por","si","no","que","tu","más","mas","muy"]);
-      const words = valLower.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-        .split(/[\s+,.()\->/]+/).filter(w => w.length >= 5 && !stopWords.has(w));
-      for (const w of words) {
-        if (itemData.keywords[w] && !seen.has(itemData.keywords[w])) {
-          foundIds.push(itemData.keywords[w]); seen.add(itemData.keywords[w]);
-        }
-      }
+  
+  // Extract potential item names/keywords from text
+  const words = value.normalize("NFD").replace(/[\u0300-\u036f]/g,"")
+    .split(/[^a-zA-ZáéíóúÁÉÍÓÚñÑ0-9']+/).filter(w => w.length >= 4);
+
+  for (const word of words) {
+    const id = findItemId(word, itemData);
+    if (id && !seen.has(id)) {
+      foundIds.push(id);
+      seen.add(id);
     }
   }
+
   return (
     <div style={{ display:"flex", gap:12, marginBottom:10, fontSize:15, alignItems:"flex-start" }}>
       <span style={{ background:"rgba(255,255,255,0.05)", padding:"4px 12px", borderRadius:5, color:"#9a9590", fontWeight:700, fontSize:12, textTransform:"uppercase", letterSpacing:"1px", minWidth:86, flexShrink:0, textAlign:"center", marginTop:2 }}>{label}</span>
@@ -469,9 +497,7 @@ function ThreatPriority({ threats }) {
       <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
         {sorted.map((t, i) => (
           <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(0,0,0,0.25)", borderRadius:10, padding:"10px 14px" }}>
-            <img src={getChampIcon(t.champion)} alt={t.champion}
-              style={{ width:36, height:36, borderRadius:6, border:`2px solid ${dangerColor[t.danger?.toLowerCase()] || "#666"}` }}
-              onError={(e) => { e.target.style.display = "none"; }} />
+            <ChampPortrait name={t.champion} size={36} border={`2px solid ${dangerColor[t.danger?.toLowerCase()] || "#666"}`} />
             <div style={{ flex:1, minWidth:0 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:4 }}>
                 <span style={{ fontSize:14, fontWeight:700, color:"#f0e6d2" }}>{t.champion}</span>
@@ -552,7 +578,9 @@ function CoachTool({ user }) {
   const [myLane, setMyLane] = useState("MID");
   const [laneOpponent, setLaneOpponent] = useState(null);
   const [enemies, setEnemies] = useState([null,null,null,null]);
+  const [enemyLanes, setEnemyLanes] = useState([null,null,null,null]);
   const [allies, setAllies] = useState([null,null,null,null]);
+  const [allyLanes, setAllyLanes] = useState([null,null,null,null]);
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [error, setError] = useState(null);
@@ -648,8 +676,8 @@ function CoachTool({ user }) {
       } catch {}
     }
 
-    const allyList = allies.filter(Boolean);
-    const enemyList = enemies.filter(Boolean);
+    const allyList = allies.map((a, i) => a ? `${a}${allyLanes[i] ? ` (${allyLanes[i]})` : ""}` : null).filter(Boolean);
+    const enemyList = enemies.map((e, i) => e ? `${e}${enemyLanes[i] ? ` (${enemyLanes[i]})` : ""}` : null).filter(Boolean);
 
     // Extracts, parses and validates one response from the API
     async function attemptFetch() {
@@ -799,11 +827,12 @@ function CoachTool({ user }) {
         </div>
         <div className="allies-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
           {allies.map((a, i) => (
-            <div key={i}>
-              <div style={{ fontSize:12, color:"#6a6a6a", marginBottom:3, marginLeft:4, display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:13 }}>{LANE_ICONS[otherLanes[i]]}</span>{otherLanes[i]}
+            <div key={i} style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              <div style={{ fontSize:11, color:"#6a6a6a", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 4px" }}>
+                <span>Slot {i+1}</span>
+                <MiniLaneSelector value={allyLanes[i]} onChange={(l) => { const n = [...allyLanes]; n[i] = l; setAllyLanes(n); }} />
               </div>
-              <ChampionPicker value={a} onChange={(v) => setAlly(i,v)} champions={availableFor(a)} placeholder="Opcional" accentColor="rgba(29,186,90,0.4)" />
+              <ChampionPicker value={a} onChange={(v) => { setAlly(i,v); if (!v) { const n = [...allyLanes]; n[i] = null; setAllyLanes(n); } }} champions={availableFor(a)} placeholder="Opcional" accentColor="rgba(29,186,90,0.4)" />
             </div>
           ))}
         </div>
@@ -820,11 +849,12 @@ function CoachTool({ user }) {
         </div>
         <div className="enemies-grid" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
           {enemies.map((e, i) => (
-            <div key={i}>
-              <div style={{ fontSize:12, color:"#6a6a6a", marginBottom:3, marginLeft:4, display:"flex", alignItems:"center", gap:4 }}>
-                <span style={{ fontSize:13 }}>{LANE_ICONS[otherLanes[i]]}</span>{otherLanes[i]}
+            <div key={i} style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              <div style={{ fontSize:11, color:"#6a6a6a", display:"flex", alignItems:"center", justifyContent:"space-between", padding:"0 4px" }}>
+                <span>Slot {i+1}</span>
+                <MiniLaneSelector value={enemyLanes[i]} onChange={(l) => { const n = [...enemyLanes]; n[i] = l; setEnemyLanes(n); }} />
               </div>
-              <ChampionPicker value={e} onChange={(v) => setEnemy(i,v)} champions={availableFor(e)} placeholder="Opcional" accentColor="rgba(232,64,87,0.3)" />
+              <ChampionPicker value={e} onChange={(v) => { setEnemy(i,v); if (!v) { const n = [...enemyLanes]; n[i] = null; setEnemyLanes(n); } }} champions={availableFor(e)} placeholder="Opcional" accentColor="rgba(232,64,87,0.3)" />
             </div>
           ))}
         </div>
@@ -868,14 +898,14 @@ function CoachTool({ user }) {
             >🔄 Regenerar</button>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
               <div className="vs-portrait" style={{ width:80, height:80, borderRadius:14, border:"2px solid #2dd66a", boxShadow:"0 0 24px rgba(45,214,106,0.35)", overflow:"hidden" }}>
-                <img src={getChampIcon(myChamp)} alt={myChamp} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                <ChampPortrait name={myChamp} size={80} style={{ borderRadius:14 }} />
               </div>
               <span className="vs-name" style={{ fontSize:14, fontWeight:700, color:"#2dd66a" }}>{myChamp}</span>
             </div>
             <div className="vs-text" style={{ fontSize:24, fontWeight:900, color:"#6a6a6a", letterSpacing:2 }}>VS</div>
             <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:6 }}>
               <div className="vs-portrait" style={{ width:80, height:80, borderRadius:14, border:"2px solid #ff4d63", boxShadow:"0 0 24px rgba(255,77,99,0.35)", overflow:"hidden" }}>
-                <img src={getChampIcon(laneOpponent)} alt={laneOpponent} style={{ width:"100%", height:"100%", objectFit:"cover" }} />
+                <ChampPortrait name={laneOpponent} size={80} style={{ borderRadius:14 }} />
               </div>
               <span className="vs-name" style={{ fontSize:14, fontWeight:700, color:"#ff4d63" }}>{laneOpponent}</span>
             </div>
@@ -1370,7 +1400,7 @@ export default function App() {
             <div style={{ textAlign:"center", marginBottom:32 }}>
               <div style={{ display:"inline-flex", alignItems:"center", gap:8, marginBottom:16 }}>
                 <div style={{ width:36, height:36, background:"linear-gradient(135deg,#c89b3c,#785a28)", borderRadius:7, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18 }}>⚡</div>
-                <span style={{ fontSize:20, fontWeight:900, color:"#f0e6d2" }}>RIFT COACH AI</span>
+                <span style={{ fontSize:20, fontWeight:900, color:"#f0e6d2" }}>UNTROLL</span>
               </div>
               <h2 style={{ fontSize:28, fontWeight:900, color:"#f0e6d2", marginBottom:8 }}>
                 {authMode === "login" ? "Bienvenido de vuelta" : "Creá tu cuenta"}
@@ -1470,8 +1500,8 @@ export default function App() {
           <div style={{ marginBottom:48 }}>
             <h2 style={{ fontSize:22, fontWeight:800, color:"#c89b3c", marginBottom:16 }}>Términos de Servicio</h2>
             <div style={{ color:"#8a8a8a", lineHeight:1.8, fontSize:14 }}>
-              <p style={{ marginBottom:16 }}>Al utilizar Rift Coach AI, aceptás estos términos. El servicio proporciona recomendaciones de builds y estrategias para League of Legends generadas por inteligencia artificial. Estas recomendaciones son orientativas y no garantizan resultados específicos en el juego.</p>
-              <p style={{ marginBottom:16 }}>Rift Coach AI utiliza la API oficial de Riot Games para acceder a datos de partidas. Tu uso de este servicio está sujeto también a los Términos de Servicio de Riot Games.</p>
+              <p style={{ marginBottom:16 }}>Al utilizar Untroll, aceptás estos términos. El servicio proporciona recomendaciones de builds y estrategias para League of Legends generadas por inteligencia artificial. Estas recomendaciones son orientativas y no garantizan resultados específicos en el juego.</p>
+              <p style={{ marginBottom:16 }}>Untroll utiliza la API oficial de Riot Games para acceder a datos de partidas. Tu uso de este servicio está sujeto también a los Términos de Servicio de Riot Games.</p>
               <p style={{ marginBottom:16 }}>Nos reservamos el derecho de modificar, suspender o discontinuar el servicio en cualquier momento. No somos responsables por decisiones tomadas en base a las recomendaciones de la IA.</p>
               <p style={{ marginBottom:16 }}>El servicio ofrece un tier gratuito con acceso a las funciones principales. Features premium adicionales pueden requerir suscripción.</p>
             </div>
@@ -1480,7 +1510,7 @@ export default function App() {
           <div style={{ marginBottom:48 }}>
             <h2 style={{ fontSize:22, fontWeight:800, color:"#c89b3c", marginBottom:16 }}>Política de Privacidad</h2>
             <div style={{ color:"#8a8a8a", lineHeight:1.8, fontSize:14 }}>
-              <p style={{ marginBottom:16 }}>Rift Coach AI recopila únicamente la información necesaria para funcionar: nombre de invocador, región y datos de la partida en curso a través de la API de Riot Games.</p>
+              <p style={{ marginBottom:16 }}>Untroll recopila únicamente la información necesaria para funcionar: nombre de invocador, región y datos de la partida en curso a través de la API de Riot Games.</p>
               <p style={{ marginBottom:16 }}>No almacenamos datos personales más allá de lo necesario para la sesión activa. No vendemos, compartimos ni transferimos tus datos a terceros.</p>
               <p style={{ marginBottom:16 }}>Podemos utilizar datos anonimizados y agregados para mejorar el servicio. Los datos de la API de Riot Games se manejan de acuerdo con sus políticas de desarrollador.</p>
               <p style={{ marginBottom:16 }}>Podés solicitar la eliminación de cualquier dato asociado a tu cuenta contactándonos directamente.</p>
@@ -1489,7 +1519,7 @@ export default function App() {
 
           <div style={{ background:"rgba(200,155,60,0.05)", border:"1px solid rgba(200,155,60,0.12)", borderRadius:12, padding:24 }}>
             <p style={{ color:"#8a8a8a", fontSize:13, lineHeight:1.7, margin:0 }}>
-              Rift Coach AI no está respaldado por Riot Games y no refleja las opiniones de Riot Games ni de ninguna persona involucrada oficialmente en la producción o gestión de las propiedades de Riot Games. Riot Games y todas las propiedades asociadas son marcas comerciales o marcas registradas de Riot Games, Inc.
+              Untroll no está respaldado por Riot Games y no refleja las opiniones de Riot Games ni de ninguna persona involucrada oficialmente en la producción o gestión de las propiedades de Riot Games. Riot Games y todas las propiedades asociadas son marcas comerciales o marcas registradas de Riot Games, Inc.
             </p>
           </div>
         </div>
@@ -1593,7 +1623,7 @@ export default function App() {
             <div className="footer-inner" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:20 }}>
               <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                 <div style={{ width:24, height:24, background:"linear-gradient(135deg,#c89b3c,#785a28)", borderRadius:5, display:"flex", alignItems:"center", justifyContent:"center", fontSize:13 }}>⚡</div>
-                <span style={{ fontSize:14, fontWeight:800, color:"#5b5a56" }}>RIFT COACH AI</span>
+                <span style={{ fontSize:14, fontWeight:800, color:"#5b5a56" }}>UNTROLL</span>
               </div>
               <div style={{ display:"flex", gap:24 }}>
                 <button className="nav-link" onClick={() => { setPage("legal"); window.scrollTo({top:0,behavior:"smooth"}); }}>Términos</button>
@@ -1602,7 +1632,7 @@ export default function App() {
             </div>
             <div style={{ marginTop:24, paddingTop:24, borderTop:"1px solid rgba(255,255,255,0.03)" }}>
               <p style={{ color:"#2a2a2a", fontSize:11, lineHeight:1.7, maxWidth:700 }}>
-                Rift Coach AI no está respaldado por Riot Games y no refleja las opiniones de Riot Games ni de ninguna persona involucrada oficialmente en la producción o gestión de las propiedades de Riot Games. Riot Games y todas las propiedades asociadas son marcas comerciales o marcas registradas de Riot Games, Inc.
+                Untroll no está respaldado por Riot Games y no refleja las opiniones de Riot Games ni de ninguna persona involucrada oficialmente en la producción o gestión de las propiedades de Riot Games. Riot Games y todas las propiedades asociadas son marcas comerciales o marcas registradas de Riot Games, Inc.
               </p>
             </div>
           </footer>

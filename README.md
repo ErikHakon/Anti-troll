@@ -1,4 +1,4 @@
-# ⚡ UnTroll (Rift Coach AI)
+# ⚡ Untroll
 
 Coaching inteligente para League of Legends con Inteligencia Artificial.
 
@@ -31,4 +31,4 @@ Este proyecto está configurado para Vercel. Conectá el repo y se deploya autom
 
 ---
 
-Rift Coach AI no está respaldado por Riot Games y no refleja las opiniones de Riot Games ni de ninguna persona involucrada oficialmente en la producción o gestión de las propiedades de Riot Games. Riot Games y todas las propiedades asociadas son marcas comerciales o marcas registradas de Riot Games, Inc.
+Untroll no está respaldado por Riot Games y no refleja las opiniones de Riot Games ni de ninguna persona involucrada oficialmente en la producción o gestión de las propiedades de Riot Games. Riot Games y todas las propiedades asociadas son marcas comerciales o marcas registradas de Riot Games, Inc.

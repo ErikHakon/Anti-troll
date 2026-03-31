@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Rift Coach AI — a Spanish-language League of Legends coaching SPA that uses Claude AI to analyze full team compositions and generate contextual game plans (builds, runes, strategy). Deployed on Vercel.
+Untroll — a Spanish-language League of Legends coaching SPA that uses Claude AI to analyze full team compositions and generate contextual game plans (builds, runes, strategy). Deployed on Vercel.
 
 ## Commands
 
