@@ -31,26 +31,10 @@ const DDRAGON_VER_CACHE_KEY = "rc_ddragon_ver";
 const DDRAGON_VER_TTL = 60 * 60 * 1000; // 1 hora
 
 // Carga síncrona desde localStorage — elimina el race condition en el primer render
-let DDRAGON_VER = (() => {
-  try {
-    const c = JSON.parse(localStorage.getItem(DDRAGON_VER_CACHE_KEY) || "null");
-    if (c?.ver && Date.now() - c.ts < DDRAGON_VER_TTL) return c.ver;
-  } catch {}
-  return "15.6.1"; // fallback
-})();
+let GLOBAL_DDRAGON_VER = "15.6.1";
 
-const versionReady = fetch("https://ddragon.leagueoflegends.com/api/versions.json")
-  .then(r => r.json())
-  .then(v => {
-    if (v?.[0]) {
-      DDRAGON_VER = v[0];
-      try { localStorage.setItem(DDRAGON_VER_CACHE_KEY, JSON.stringify({ ver: v[0], ts: Date.now() })); } catch {}
-    }
-  })
-  .catch(() => {});
-
-function ddragonUrl(path) {
-  return `https://ddragon.leagueoflegends.com/cdn/${DDRAGON_VER}/${path}`;
+function ddragonUrl(path, ver = GLOBAL_DDRAGON_VER) {
+  return `https://ddragon.leagueoflegends.com/cdn/${ver}/${path}`;
 }
 
 // DDragon champion filename overrides
@@ -384,7 +368,7 @@ function ItemBadge({ name, itemData, index, color }) {
 }
 
 function BuildRow({ label, value, itemData }) {
-  if (!value || !itemData?.exact) return null;
+  if (!value || !itemData?.exactEN) return null;
   const foundIds = [];
   const seen = new Set();
   
@@ -581,6 +565,7 @@ function WardSpotsCard({ text }) {
 function CoachTool({ user }) {
   const [myChamp, setMyChamp] = useState(null);
   const [myLane, setMyLane] = useState("MID");
+  const [ddVer, setDdVer] = useState(GLOBAL_DDRAGON_VER);
   const [laneOpponent, setLaneOpponent] = useState(null);
   const [enemies, setEnemies] = useState([null,null,null,null]);
   const [enemyLanes, setEnemyLanes] = useState([null,null,null,null]);
@@ -597,10 +582,30 @@ function CoachTool({ user }) {
   const [buildType, setBuildType] = useState("auto");
 
   useEffect(() => {
-    versionReady.then(() => {
+    const loadVersion = async () => {
+      let currentVer = GLOBAL_DDRAGON_VER;
+      try {
+        const c = JSON.parse(localStorage.getItem(DDRAGON_VER_CACHE_KEY) || "null");
+        if (c?.ver && Date.now() - c.ts < DDRAGON_VER_TTL) {
+          currentVer = c.ver;
+        } else {
+          const res = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
+          const v = await res.json();
+          if (v?.[0]) {
+            currentVer = v[0];
+            localStorage.setItem(DDRAGON_VER_CACHE_KEY, JSON.stringify({ ver: v[0], ts: Date.now() }));
+          }
+        }
+      } catch (e) {}
+      GLOBAL_DDRAGON_VER = currentVer;
+      setDdVer(currentVer);
+      return currentVer;
+    };
+
+    loadVersion().then((actualVer) => {
       Promise.all([
-        fetch(ddragonUrl("data/en_US/item.json")).then(r => r.json()),
-        fetch(ddragonUrl("data/es_ES/item.json")).then(r => r.json()),
+        fetch(ddragonUrl("data/en_US/item.json", actualVer)).then(r => r.json()),
+        fetch(ddragonUrl("data/es_ES/item.json", actualVer)).then(r => r.json()),
       ]).then(([enData, esData]) => {
         const exactEN = {};
         const normEN = {};
@@ -619,31 +624,31 @@ function CoachTool({ user }) {
         setItemData({ exactEN, exactES, normEN, normES, keywords: buildItemKeywordIndex({ exactEN, exactES }), names });
       }).catch(() => {});
 
-    Promise.all([
-      fetch(ddragonUrl("data/en_US/runesReforged.json")).then(r => r.json()),
-      fetch(ddragonUrl("data/es_ES/runesReforged.json")).then(r => r.json()),
-    ]).then(([enRunes, esRunes]) => {
-      const exact = {};
-      const normalized = {};
-      const addRunes = (trees) => {
-        for (const tree of trees) {
-          const url = "https://ddragon.leagueoflegends.com/cdn/img/" + tree.icon;
-          exact[tree.name] = url;
-          normalized[normalize(tree.name)] = url;
-          for (const slot of tree.slots) {
-            for (const rune of slot.runes) {
-              const rUrl = "https://ddragon.leagueoflegends.com/cdn/img/" + rune.icon;
-              exact[rune.name] = rUrl;
-              normalized[normalize(rune.name)] = rUrl;
+      Promise.all([
+        fetch(ddragonUrl("data/en_US/runesReforged.json", actualVer)).then(r => r.json()),
+        fetch(ddragonUrl("data/es_ES/runesReforged.json", actualVer)).then(r => r.json()),
+      ]).then(([enRunes, esRunes]) => {
+        const exact = {};
+        const normalized = {};
+        const addRunes = (trees) => {
+          for (const tree of trees) {
+            const url = "https://ddragon.leagueoflegends.com/cdn/img/" + tree.icon;
+            exact[tree.name] = url;
+            normalized[normalize(tree.name)] = url;
+            for (const slot of tree.slots) {
+              for (const rune of slot.runes) {
+                const rUrl = "https://ddragon.leagueoflegends.com/cdn/img/" + rune.icon;
+                exact[rune.name] = rUrl;
+                normalized[normalize(rune.name)] = rUrl;
+              }
             }
           }
-        }
-      };
-      addRunes(enRunes);
-      addRunes(esRunes);
-      setRuneData({ exact, normalized });
-    }).catch(() => {});
-    }); // end versionReady.then
+        };
+        addRunes(enRunes);
+        addRunes(esRunes);
+        setRuneData({ exact, normalized });
+      }).catch(() => {});
+    });
   }, []);
   
   const handleLaneChange = (l) => {
@@ -1076,11 +1081,14 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login"); // "login" or "register"
   const [authForm, setAuthForm] = useState({ email:"", password:"", username:"", region:"LAS" });
+  const [profileForm, setProfileForm] = useState({ username:"", region:"LAS" });
+  const [profileLoading, setProfileLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
   const [sessionLoading, setSessionLoading] = useState(true);
   const captchaRef = useRef(null);
   const [captchaToken, setCaptchaToken] = useState(null);
+  const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const REGIONS = ["LAS","LAN","NA","EUW","EUNE","KR","JP","BR","OCE","TR","RU"];
 
@@ -1117,12 +1125,13 @@ export default function App() {
 
       // Si no existe el perfil (común en primer login OAuth), intentamos crearlo
       if (error && error.code === "PGRST116" || !data) {
-        // El trigger de Supabase debería crearlo, pero por seguridad hacemos un insert manual (upsert)
+        // Problema 1 Fix: Siempre guardamos username como null en el primer login/upsert OAuth
+        // para forzar al usuario a elegir su Summoner Name real.
         const newProfile = {
           id: authUser.id,
           email: authUser.email,
-          username: authUser.user_metadata?.username || null,
-          region: authUser.user_metadata?.region || null,
+          username: null, 
+          region: null,
           tier: "free",
           generations_today: 0
         };
@@ -1140,23 +1149,27 @@ export default function App() {
         setUser({
           id: authUser.id,
           email: authUser.email,
+          provider: authUser.app_metadata?.provider || authUser.identities?.[0]?.provider || "email",
           username: data.username,
           region: data.region,
           tier: data.tier,
           generations_today: data.generations_today,
-          isIncomplete: !data.username || !data.region // Marcamos si falta info básica
+          isIncomplete: !data.username || !data.region
         });
+        if (!data.username || !data.region) setShowCompleteModal(true);
       } else {
         // Fallback extremo
         setUser({
           id: authUser.id,
           email: authUser.email,
-          username: authUser.user_metadata?.username || authUser.email?.split("@")[0] || "Invocador",
-          region: authUser.user_metadata?.region || "LAS",
+          provider: "unknown",
+          username: null,
+          region: "LAS",
           tier: "free",
           generations_today: 0,
           isIncomplete: true
         });
+        setShowCompleteModal(true);
       }
     } catch (err) {
       console.error("Error fetching/creating profile:", err);
@@ -1294,6 +1307,73 @@ export default function App() {
     setTimeout(() => toolRef.current?.scrollIntoView({ behavior:"smooth" }), 100);
   };
 
+  const handleUpdateProfile = async (u, r) => {
+    if (!u || !r) return;
+    setProfileLoading(true);
+    try {
+      const { error } = await supabase
+        .from("profiles")
+        .update({ username: u, region: r })
+        .eq("id", user.id);
+      
+      if (error) throw error;
+      
+      // Actualizar estado local
+      setUser({ ...user, username: u, region: r, isIncomplete: false });
+      setShowCompleteModal(false);
+      setProfileLoading(false);
+      if (page === "settings") {
+         alert("Cambios guardados correctamente.");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Error al actualizar el perfil.");
+      setProfileLoading(false);
+    }
+  };
+
+  const CompleteProfileModal = () => (
+    <div style={{
+      position:"fixed", inset:0, zIndex:3000, display:"flex", alignItems:"center", justifyContent:"center",
+      background:"rgba(8,8,16,0.9)", backdropFilter:"blur(12px)", padding:24
+    }}>
+      <div style={{
+        width:"100%", maxWidth:400, background:"rgba(255,255,255,0.02)", border:"1px solid rgba(200,155,60,0.3)",
+        borderRadius:20, padding:32, boxShadow:"0 32px 64px rgba(0,0,0,0.6)", animation:"fadeUp 0.4s ease"
+      }}>
+        <div style={{ textAlign:"center", marginBottom:28 }}>
+          <div style={{ width:48, height:48, background:"rgba(200,155,60,0.2)", borderRadius:12, display:"flex", alignItems:"center", justifyContent:"center", fontSize:24, margin:"0 auto 16px" }}>⚡</div>
+          <h2 style={{ fontSize:22, fontWeight:900, color:"#f0e6d2", marginBottom:8 }}>Completá tu perfil</h2>
+          <p style={{ color:"#6a6a6a", fontSize:14 }}>Para usar UnTroll necesitamos tu Summoner Name en League of Legends.</p>
+        </div>
+        
+        <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+          <div>
+            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Summoner Name</label>
+            <input className="auth-input" type="text" placeholder="Tu nombre en LoL" 
+              value={profileForm.username} onChange={(e) => setProfileForm({...profileForm, username: e.target.value})} />
+          </div>
+          <div>
+            <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>Región</label>
+            <select className="auth-select" value={profileForm.region} 
+              onChange={(e) => setProfileForm({...profileForm, region: e.target.value})}>
+              {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+            </select>
+          </div>
+          
+          <button onClick={() => handleUpdateProfile(profileForm.username, profileForm.region)} 
+            disabled={profileLoading || !profileForm.username} style={{
+              width:"100%", padding:14, marginTop:8, background: (profileLoading || !profileForm.username) ? "rgba(200,155,60,0.2)" : "linear-gradient(135deg,#c89b3c,#a07830)",
+              color:"#080810", border:"none", borderRadius:10, fontSize:15, fontWeight:800, cursor: profileLoading ? "wait" : "pointer",
+              fontFamily:"'Outfit'", letterSpacing:1, transition:"all 0.3s"
+            }}>
+            {profileLoading ? "Guardando..." : "Guardar perfil"}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -1425,13 +1505,17 @@ export default function App() {
               <div style={{ display:"flex", alignItems:"center", gap:12 }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#c89b3c,#785a28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#080810" }}>
-                    {user.username.charAt(0).toUpperCase()}
+                    {user.username ? user.username.charAt(0).toUpperCase() : "?"}
                   </div>
-                  <div>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#f0e6d2", lineHeight:1.2 }}>{user.username}</div>
-                    <div style={{ fontSize:10, color:"#5b5a56" }}>{user.region}</div>
+                  <div style={{ cursor:"pointer" }} onClick={() => setPage("settings")}>
+                    <div style={{ fontSize:12, fontWeight:700, color:"#f0e6d2", lineHeight:1.2 }}>{user.username || "Invocador"}</div>
+                    <div style={{ fontSize:10, color:"#5b5a56" }}>{user.region || "Sin región"}</div>
                   </div>
                 </div>
+                <button onClick={() => setPage("settings")} style={{ background:"none", border:"none", color:"#5b5a56", cursor:"pointer", display:"flex", alignItems:"center", transition:"color 0.3s" }} onMouseEnter={e => e.currentTarget.style.color="#c89b3c"} onMouseLeave={e => e.currentTarget.style.color="#5b5a56"}>
+                  <span style={{ fontSize:14 }}>⚙️</span>
+                </button>
+                <div style={{ width:1, height:16, background:"rgba(255,255,255,0.06)" }} />
                 <button onClick={logout} style={{ background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:11, fontFamily:"'Outfit'", fontWeight:600, letterSpacing:"0.5px", transition:"color 0.3s" }}
                   onMouseEnter={(e) => e.currentTarget.style.color="#e84057"}
                   onMouseLeave={(e) => e.currentTarget.style.color="#5b5a56"}>
@@ -1469,10 +1553,11 @@ export default function App() {
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
                 <div style={{ display:"flex", alignItems:"center", gap:8 }}>
                   <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#c89b3c,#785a28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#080810" }}>
-                    {user.username.charAt(0).toUpperCase()}
+                    {user.username ? user.username.charAt(0).toUpperCase() : "?"}
                   </div>
-                  <span style={{ fontSize:14, fontWeight:700, color:"#f0e6d2" }}>{user.username}</span>
+                  <span style={{ fontSize:14, fontWeight:700, color:"#f0e6d2" }} onClick={() => { setPage("settings"); setMobileMenu(false); }}>{user.username || "Invocador"}</span>
                 </div>
+                <button onClick={() => { setPage("settings"); setMobileMenu(false); }} style={{ background:"none", border:"none", color:"#c89b3c", fontSize:13, fontWeight:600 }}>Ajustes</button>
                 <button onClick={() => { logout(); setMobileMenu(false); }} style={{ background:"none", border:"none", color:"#e84057", cursor:"pointer", fontSize:13, fontFamily:"'Outfit'", fontWeight:600 }}>Salir</button>
               </div>
             ) : (
@@ -1660,6 +1745,52 @@ export default function App() {
             </p>
           </div>
         </div>
+      ) : page === "settings" ? (
+        /* ─── Settings Page ─── */
+        <div style={{ minHeight:"100vh", padding:"100px 24px 60px" }}>
+          <div style={{ maxWidth:600, margin:"0 auto", animation:"fadeUp 0.6s ease forwards" }}>
+            <button onClick={() => setPage("home")} style={{ background:"none", border:"none", color:"#c89b3c", cursor:"pointer", fontSize:14, fontFamily:"'Outfit'", marginBottom:32, display:"flex", alignItems:"center", gap:6 }}>← Volver</button>
+            <h1 style={{ fontSize:32, fontWeight:900, color:"#f0e6d2", marginBottom:8 }}>Ajustes de Perfil</h1>
+            <p style={{ color:"#5b5a56", marginBottom:40 }}>Gestioná tu información de invocador y cuenta.</p>
+
+            <div style={{ background:"rgba(255,255,255,0.02)", border:"1px solid rgba(255,255,255,0.06)", borderRadius:16, padding:32, display:"flex", flexDirection:"column", gap:28 }}>
+              
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+                <div>
+                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Summoner Name</label>
+                  <input className="auth-input" type="text" value={profileForm.username} onChange={(e) => setProfileForm({...profileForm, username: e.target.value})} />
+                </div>
+                <div>
+                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Región</label>
+                  <select className="auth-select" value={profileForm.region} onChange={(e) => setProfileForm({...profileForm, region: e.target.value})}>
+                    {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ height:1, background:"rgba(255,255,255,0.04)" }} />
+
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:24 }}>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Email</div>
+                  <div style={{ color:"#f0e6d2", fontSize:14, opacity:0.8 }}>{user?.email}</div>
+                </div>
+                <div>
+                  <div style={{ fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:6 }}>Método de Login</div>
+                  <div style={{ color:"#f0e6d2", fontSize:14, opacity:0.8, textTransform:"capitalize" }}>{user?.provider}</div>
+                </div>
+              </div>
+
+              <button onClick={() => handleUpdateProfile(profileForm.username, profileForm.region)} disabled={profileLoading} style={{
+                background:"linear-gradient(135deg,#c89b3c,#a07830)", color:"#080810", border:"none", padding:"14px 28px", borderRadius:10, 
+                fontSize:15, fontWeight:800, cursor: profileLoading ? "wait" : "pointer", fontFamily:"'Outfit'", letterSpacing:1,
+                alignSelf:"flex-start", marginTop:10
+              }}>
+                {profileLoading ? "Guardando..." : "Guardar cambios"}
+              </button>
+            </div>
+          </div>
+        </div>
       ) : (
         <div>
           {/* Hero */}
@@ -1677,7 +1808,11 @@ export default function App() {
                   <div style={{ fontSize:14, fontWeight:800, color:"#f0e6d2", marginBottom:2 }}>Perfil Incompleto</div>
                   <div style={{ fontSize:12, color:"#c8c0b0" }}>Para generar un game plan, primero debés configurar tu nombre de invocador y región.</div>
                 </div>
-                <button onClick={() => { setAuthMode("register"); setPage("auth"); }} style={{
+                <button onClick={(e) => { 
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowCompleteModal(true);
+                }} style={{
                   background:"#c89b3c", color:"#080810", border:"none", borderRadius:6,
                   padding:"6px 14px", fontSize:12, fontWeight:800, cursor:"pointer"
                 }}>Completar</button>
@@ -1794,6 +1929,7 @@ export default function App() {
           </footer>
         </div>
       )}
+      {showCompleteModal && <CompleteProfileModal />}
     </>
   );
 }
