@@ -1109,8 +1109,13 @@ export default function App() {
   const [mobileMenu, setMobileMenu] = useState(false);
   const [user, setUser] = useState(null);
   const [authMode, setAuthMode] = useState("login"); // "login" or "register"
-  const [authForm, setAuthForm] = useState({ email:"", password:"", username:"", region:"LAS" });
+  const [authForm, setAuthForm] = useState({ email:"", password:"", confirmPassword:"", username:"", region:"LAS" });
   const [profileForm, setProfileForm] = useState({ username:"", region:"LAS" });
+  const [passForm, setPassForm] = useState({ password:"", confirmPassword:"" });
+  const [passLoading, setPassLoading] = useState(false);
+  const [showPass, setShowPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [showUserDropdown, setShowUserDropdown] = useState(false);
   const [profileLoading, setProfileLoading] = useState(false);
   const [authError, setAuthError] = useState(null);
   const [authLoading, setAuthLoading] = useState(false);
@@ -1241,6 +1246,11 @@ export default function App() {
           setAuthLoading(false);
           return;
         }
+        if (authForm.password !== authForm.confirmPassword) {
+          setAuthError("Las contraseñas no coinciden");
+          setAuthLoading(false);
+          return;
+        }
         if (!captchaToken) {
           setAuthError("Completá el captcha");
           setAuthLoading(false);
@@ -1368,6 +1378,37 @@ export default function App() {
     }
   };
 
+  const handleUpdatePassword = async () => {
+    if (passForm.password !== passForm.confirmPassword) {
+      showToast("Las contraseñas no coinciden", "error");
+      return;
+    }
+    if (passForm.password.length < 6) {
+      showToast("La contraseña debe tener al menos 6 caracteres", "error");
+      return;
+    }
+    
+    setPassLoading(true);
+    try {
+      const { error } = await supabase.auth.updateUser({ password: passForm.password });
+      if (error) throw error;
+      showToast("Contraseña actualizada correctamente", "success");
+      setPassForm({ password: "", confirmPassword: "" });
+    } catch (err) {
+      console.error(err);
+      showToast("Error al actualizar la contraseña", "error");
+    } finally {
+      setPassLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!showUserDropdown) return;
+    const close = () => setShowUserDropdown(false);
+    document.addEventListener("click", close);
+    return () => document.removeEventListener("click", close);
+  }, [showUserDropdown]);
+
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
@@ -1487,7 +1528,6 @@ export default function App() {
           <div style={{ display:"flex", alignItems:"center", gap:10, cursor:"pointer" }} onClick={() => { setPage("home"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>
             <div style={{ width:32, height:32, background:"linear-gradient(135deg,#c89b3c,#785a28)", borderRadius:7, display:"flex", alignItems:"center", justifyContent:"center", fontSize:17 }}>⚡</div>
             <span style={{ fontSize:18, fontWeight:900, color:"#f0e6d2", letterSpacing:"-0.5px" }}>UNTROLL</span>
-            <span style={{ fontSize:11, fontWeight:700, color:"#c89b3c", background:"rgba(200,155,60,0.12)", padding:"2px 8px", borderRadius:4, letterSpacing:"1px" }}>AI</span>
           </div>
           <button className="hamburger" onClick={() => setMobileMenu(!mobileMenu)}>
             {mobileMenu ? "✕" : "☰"}
@@ -1498,25 +1538,46 @@ export default function App() {
             <button className={`nav-link ${page==="legal"?"active":""}`} onClick={() => { setPage("legal"); window.scrollTo({top:0,behavior:"smooth"}); }}>Legal</button>
             <div style={{ width:1, height:20, background:"rgba(255,255,255,0.06)", marginLeft:8 }} />
             {user ? (
-              <div style={{ display:"flex", alignItems:"center", gap:12 }}>
-                <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-                  <div style={{ width:30, height:30, borderRadius:"50%", background:"linear-gradient(135deg,#c89b3c,#785a28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:13, fontWeight:800, color:"#080810" }}>
+              <div style={{ position:"relative" }}>
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setShowUserDropdown(!showUserDropdown); }} 
+                  style={{ background:"none", border:"none", display:"flex", alignItems:"center", gap:10, cursor:"pointer", padding:"4px 8px", borderRadius:8, transition:"all 0.3s" }}
+                  onMouseEnter={e => e.currentTarget.style.background="rgba(255,255,255,0.03)"}
+                  onMouseLeave={e => e.currentTarget.style.background="none"}
+                >
+                  <div style={{ width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg,#c89b3c,#785a28)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:800, color:"#080810", border:"1px solid rgba(200,155,60,0.3)" }}>
                     {user.username ? user.username.charAt(0).toUpperCase() : "?"}
                   </div>
-                  <div style={{ cursor:"pointer" }} onClick={() => setPage("settings")}>
-                    <div style={{ fontSize:12, fontWeight:700, color:"#f0e6d2", lineHeight:1.2 }}>{user.username || "Invocador"}</div>
-                    <div style={{ fontSize:10, color:"#5b5a56" }}>{user.region || "Sin región"}</div>
+                  <div className="nav-user-info" style={{ display:"flex", flexDirection:"column", alignItems:"flex-start" }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:"#f0e6d2", lineHeight:1.1 }}>{user.username || "Invocador"} ▾</div>
                   </div>
-                </div>
-                <button onClick={() => setPage("settings")} style={{ background:"none", border:"none", color:"#5b5a56", cursor:"pointer", display:"flex", alignItems:"center", transition:"color 0.3s" }} onMouseEnter={e => e.currentTarget.style.color="#c89b3c"} onMouseLeave={e => e.currentTarget.style.color="#5b5a56"}>
-                  <span style={{ fontSize:14 }}>⚙️</span>
                 </button>
-                <div style={{ width:1, height:16, background:"rgba(255,255,255,0.06)" }} />
-                <button onClick={logout} style={{ background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:11, fontFamily:"'Outfit'", fontWeight:600, letterSpacing:"0.5px", transition:"color 0.3s" }}
-                  onMouseEnter={(e) => e.currentTarget.style.color="#e84057"}
-                  onMouseLeave={(e) => e.currentTarget.style.color="#5b5a56"}>
-                  Salir
-                </button>
+
+                {showUserDropdown && (
+                  <div style={{
+                    position:"absolute", top:"calc(100% + 12px)", right:0, width:180,
+                    background:"rgba(18,18,31,0.95)", backdropFilter:"blur(16px)",
+                    border:"1px solid rgba(200,155,60,0.2)", borderRadius:12, padding:"8px",
+                    boxShadow:"0 16px 48px rgba(0,0,0,0.6)", zIndex:1000,
+                    animation: "fadeUp 0.2s ease"
+                  }}>
+                    <button onClick={() => setPage("settings")} style={{
+                      width:"100%", textAlign:"left", padding:"10px 12px", background:"none", border:"none",
+                      color:"#c8c8c8", fontSize:13, fontWeight:600, borderRadius:8, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:10, transition:"all 0.2s"
+                    }} onMouseEnter={e => { e.currentTarget.style.background="rgba(200,155,60,0.1)"; e.currentTarget.style.color="#c89b3c"; }} onMouseLeave={e => { e.currentTarget.style.background="none"; e.currentTarget.style.color="#c8c8c8"; }}>
+                      <span>⚙️</span> Ajustes
+                    </button>
+                    <div style={{ height:1, background:"rgba(255,255,255,0.04)", margin:"4px 0" }} />
+                    <button onClick={logout} style={{
+                      width:"100%", textAlign:"left", padding:"10px 12px", background:"none", border:"none",
+                      color:"#e84057", fontSize:13, fontWeight:600, borderRadius:8, cursor:"pointer",
+                      display:"flex", alignItems:"center", gap:10, transition:"all 0.2s"
+                    }} onMouseEnter={e => e.currentTarget.style.background="rgba(232,64,87,0.08)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
+                      <span>🚪</span> Salir
+                    </button>
+                  </div>
+                )}
               </div>
             ) : (
               <div style={{ display:"flex", gap:10, alignItems:"center" }}>
@@ -1647,11 +1708,28 @@ export default function App() {
                     value={authForm.email} onChange={(e) => setAuthForm({...authForm, email: e.target.value})} />
                 </div>
 
-                <div>
+                <div style={{ position:"relative" }}>
                   <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:"1px", marginBottom:6 }}>Contraseña</label>
-                  <input className="auth-input" type="password" placeholder={authMode === "register" ? "Mínimo 6 caracteres" : "Tu contraseña"}
+                  <input className="auth-input" type={showPass ? "text" : "password"} placeholder={authMode === "register" ? "Mínimo 6 caracteres" : "Tu contraseña"}
                     value={authForm.password} onChange={(e) => setAuthForm({...authForm, password: e.target.value})} />
+                  <button type="button" onClick={() => setShowPass(!showPass)} style={{ position:"absolute", right:12, bottom:12, background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:16 }}>
+                    {showPass ? "👁️" : "🙈"}
+                  </button>
                 </div>
+
+                {authMode === "register" && (
+                  <div style={{ position:"relative" }}>
+                    <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:"1px", marginBottom:6 }}>Repetir Contraseña</label>
+                    <input className="auth-input" type={showConfirmPass ? "text" : "password"} placeholder="Repetí tu contraseña"
+                      value={authForm.confirmPassword} onChange={(e) => setAuthForm({...authForm, confirmPassword: e.target.value})} />
+                    <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} style={{ position:"absolute", right:12, bottom:12, background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:16 }}>
+                      {showConfirmPass ? "👁️" : "🙈"}
+                    </button>
+                    {authForm.confirmPassword && authForm.password !== authForm.confirmPassword && (
+                      <div style={{ color:"#e84057", fontSize:11, marginTop:4, fontWeight:600 }}>Las contraseñas no coinciden</div>
+                    )}
+                  </div>
+                )}
 
                 {authMode === "register" && (
                   <div>
@@ -1784,6 +1862,40 @@ export default function App() {
               }}>
                 {profileLoading ? "Guardando..." : "Guardar cambios"}
               </button>
+
+              {user?.provider === 'email' && (
+                <>
+                  <div style={{ height:1, background:"rgba(255,255,255,0.04)", margin:"8px 0" }} />
+                  <div style={{ display:"flex", flexDirection:"column", gap:20 }}>
+                    <h3 style={{ fontSize:18, fontWeight:800, color:"#f0e6d2", margin:0 }}>Cambiar contraseña</h3>
+                    <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
+                      <div style={{ position:"relative" }}>
+                        <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Nueva contraseña</label>
+                        <input className="auth-input" type={showPass ? "text" : "password"} value={passForm.password} onChange={(e) => setPassForm({...passForm, password: e.target.value})} placeholder="Mínimo 6 caracteres" />
+                        <button type="button" onClick={() => setShowPass(!showPass)} style={{ position:"absolute", right:12, bottom:12, background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:16 }}>
+                          {showPass ? "👁️" : "🙈"}
+                        </button>
+                      </div>
+                      <div style={{ position:"relative" }}>
+                        <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Repetir nueva contraseña</label>
+                        <input className="auth-input" type={showConfirmPass ? "text" : "password"} value={passForm.confirmPassword} onChange={(e) => setPassForm({...passForm, confirmPassword: e.target.value})} placeholder="Confirmá tu contraseña" />
+                        <button type="button" onClick={() => setShowConfirmPass(!showConfirmPass)} style={{ position:"absolute", right:12, bottom:12, background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:16 }}>
+                          {showConfirmPass ? "👁️" : "🙈"}
+                        </button>
+                      </div>
+                    </div>
+                    {passForm.confirmPassword && passForm.password !== passForm.confirmPassword && (
+                      <div style={{ color:"#e84057", fontSize:12, fontWeight:600 }}>Las contraseñas no coinciden</div>
+                    )}
+                    <button onClick={handleUpdatePassword} disabled={passLoading || !passForm.password || passForm.password !== passForm.confirmPassword} style={{
+                      background:"rgba(200,155,60,0.1)", color:"#c89b3c", border:"1px solid rgba(200,155,60,0.3)", padding:"12px 24px", borderRadius:10, 
+                      fontSize:14, fontWeight:700, cursor: passLoading ? "wait" : "pointer", fontFamily:"'Outfit'", transition:"all 0.3s", alignSelf:"flex-start"
+                    }} onMouseEnter={e => { if(!passLoading) e.currentTarget.style.background="rgba(200,155,60,0.2)"; }} onMouseLeave={e => { if(!passLoading) e.currentTarget.style.background="rgba(200,155,60,0.1)"; }}>
+                      {passLoading ? "Actualizando..." : "Actualizar contraseña"}
+                    </button>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
