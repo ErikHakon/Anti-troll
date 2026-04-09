@@ -1073,10 +1073,38 @@ function CoachTool({ user }) {
   );
 }
 
+/* ─── UI Components ─── */
+function Toast({ message, type, onClose }) {
+  const icons = { success: "✅", error: "❌", warning: "⚠️" };
+  const colors = { success: "#2dd66a", error: "#ff4d63", warning: "#ffd700" };
+  
+  return (
+    <div style={{
+      position: "fixed", bottom: 32, right: 32, zIndex: 9999,
+      background: "rgba(18,18,31,0.95)", backdropFilter: "blur(12px)",
+      border: `1px solid ${colors[type]}40`, borderRadius: 12,
+      padding: "16px 24px", color: "#f0e6d2", fontSize: 15, fontWeight: 600,
+      display: "flex", alignItems: "center", gap: 12,
+      boxShadow: `0 16px 48px rgba(0,0,0,0.5), 0 0 20px ${colors[type]}15`,
+      animation: "toastSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1), toastFadeOut 0.4s 2.6s forwards",
+    }}>
+      <span style={{ fontSize: 20 }}>{icons[type]}</span>
+      <span style={{ flex: 1 }}>{message}</span>
+      <button onClick={onClose} style={{ background: "none", border: "none", color: "#6a6a6a", cursor: "pointer", fontSize: 18, padding: "0 4px" }}>✕</button>
+    </div>
+  );
+}
+
 /* ─── Main App ─── */
 export default function App() {
   const [page, setPage] = useState("home");
   const [scrollY, setScrollY] = useState(0);
+  const [toast, setToast] = useState(null);
+
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
   const toolRef = useRef(null);
   const [mobileMenu, setMobileMenu] = useState(false);
   const [user, setUser] = useState(null);
@@ -1319,16 +1347,20 @@ export default function App() {
       
       if (error) throw error;
       
-      // Actualizar estado local
-      setUser({ ...user, username: u, region: r, isIncomplete: false });
+      // Sincronizar con la base de datos directamente
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await fetchProfile(authUser);
+      }
+      
       setShowCompleteModal(false);
       setProfileLoading(false);
       if (page === "settings") {
-         alert("Cambios guardados correctamente.");
+         showToast("Cambios guardados correctamente.", "success");
       }
     } catch (err) {
       console.error(err);
-      alert("Error al actualizar el perfil.");
+      showToast("Error al actualizar el perfil.", "error");
       setProfileLoading(false);
     }
   };
@@ -1345,6 +1377,8 @@ export default function App() {
     @keyframes fadeUp { from { opacity:0; transform:translateY(30px); } to { opacity:1; transform:translateY(0); } }
     @keyframes shimmer { 0% { background-position:-200% center; } 100% { background-position:200% center; } }
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:0.7; } }
+    @keyframes toastSlideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes toastFadeOut { from { opacity: 1; transform: scale(1); } to { opacity: 0; transform: scale(0.95); margin-bottom: -20px; } }
     @keyframes loadingGlow { 0%,100% { box-shadow:0 4px 24px rgba(200,155,60,0.25); } 50% { box-shadow:0 4px 40px rgba(200,155,60,0.5); } }
     .btn-loading-glow { animation: loadingGlow 1.5s ease-in-out infinite, shimmer 2s linear infinite; }
     .fade-up { animation:fadeUp 0.8s ease forwards; opacity:0; }
@@ -1896,6 +1930,7 @@ export default function App() {
           initialRegion={profileForm.region} 
         />
       )}
+      {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     </>
   );
 }
