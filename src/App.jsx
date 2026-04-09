@@ -1558,7 +1558,7 @@ export default function App() {
                     position:"absolute", top:"calc(100% + 12px)", right:0, width:180,
                     background:"rgba(18,18,31,0.95)", backdropFilter:"blur(16px)",
                     border:"1px solid rgba(200,155,60,0.2)", borderRadius:12, padding:"8px",
-                    boxShadow:"0 16px 48px rgba(0,0,0,0.6)", zIndex:1000,
+                    boxShadow:"0 16px 48px rgba(0,0,0,0.6)", zIndex:1000, fontFamily: "'Outfit', sans-serif",
                     animation: "fadeUp 0.2s ease"
                   }}>
                     <button onClick={() => setPage("settings")} style={{
@@ -1831,7 +1831,7 @@ export default function App() {
               
               <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:20 }}>
                 <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Summoner Name</label>
+                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Nombre de Invocador</label>
                   <input className="auth-input" type="text" value={profileForm.username} onChange={(e) => setProfileForm({...profileForm, username: e.target.value})} />
                 </div>
                 <div>
