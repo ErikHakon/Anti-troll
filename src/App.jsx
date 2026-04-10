@@ -1122,6 +1122,7 @@ export default function App() {
   const [sessionLoading, setSessionLoading] = useState(true);
   const captchaRef = useRef(null);
   const [captchaToken, setCaptchaToken] = useState(null);
+  const [loginAttempts, setLoginAttempts] = useState(0);
   const [showCompleteModal, setShowCompleteModal] = useState(false);
 
   const REGIONS = ["LAS","LAN","NA","EUW","EUNE","KR","JP","BR","OCE","TR","RU"];
@@ -1295,17 +1296,33 @@ export default function App() {
           return;
         }
 
+        // Si hay 3+ intentos fallidos, requerir captcha
+        if (loginAttempts >= 3 && !captchaToken) {
+          setAuthError("Completá la verificación de seguridad");
+          setAuthLoading(false);
+          return;
+        }
+
         const { data, error } = await supabase.auth.signInWithPassword({
           email: authForm.email,
           password: authForm.password,
         });
 
         if (error) {
+          const newAttempts = loginAttempts + 1;
+          setLoginAttempts(newAttempts);
           setAuthError(translateAuthError(error.message, error.code));
+          // Resetear captcha si ya se había resuelto (para pedir uno nuevo)
+          if (captchaToken) {
+            captchaRef.current?.resetCaptcha();
+            setCaptchaToken(null);
+          }
           setAuthLoading(false);
           return;
         }
 
+        // Login exitoso: resetear contador
+        setLoginAttempts(0);
         setPage("home");
       }
 
@@ -1763,8 +1780,13 @@ export default function App() {
                   </div>
                 )}
 
-                {authMode === "register" && (
-                  <div style={{ display:"flex", justifyContent:"center" }}>
+                {(authMode === "register" || (authMode === "login" && loginAttempts >= 3)) && (
+                  <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:8 }}>
+                    {authMode === "login" && loginAttempts >= 3 && (
+                      <p style={{ color:"#5b5a56", fontSize:12, textAlign:"center" }}>
+                        Varios intentos detectados. Confirmá que sos humano para continuar.
+                      </p>
+                    )}
                     <HCaptcha
                       sitekey="85bed5bc-7136-4836-9534-abb4b64af390"
                       onVerify={(token) => setCaptchaToken(token)}
