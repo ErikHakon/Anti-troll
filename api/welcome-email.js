@@ -19,7 +19,7 @@ export default async function handler(req, res) {
       to: [email],
       subject: `¡Bienvenido a UnTroll, ${username}! Tu coach ya está listo`,
       html: `
-        <div style="background-color: #f9f9f9; color: #333333; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid #eeeeee;">
+        <div style="background-color: #0d0d1a; color: #c8c8c8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid rgba(200, 155, 60, 0.2);">
           <!-- Header -->
           <div style="background-color: #080810; padding: 30px; text-align: center;">
             <h1 style="color: #c89b3c; font-size: 32px; font-weight: 900; margin: 0; letter-spacing: 2px;">UNTROLL</h1>
@@ -31,11 +31,11 @@ export default async function handler(req, res) {
 
           <!-- Content -->
           <div style="padding: 40px 30px;">
-            <h2 style="font-size: 24px; font-weight: 800; color: #080810; margin-top: 0;">¡Hola, ${username}!</h2>
-            <p style="font-size: 16px; line-height: 1.6; color: #444444;">
+            <h2 style="font-size: 24px; font-weight: 800; color: #f0e6d2; margin-top: 0;">¡Hola, ${username}!</h2>
+            <p style="font-size: 16px; line-height: 1.6; color: #c8c8c8;">
               Bienvenido a <strong>UnTroll</strong>. Tu acceso a la mejor tecnología de análisis contextual para League of Legends ya está activo.
             </p>
-            <p style="font-size: 16px; line-height: 1.6; color: #444444;">
+            <p style="font-size: 16px; line-height: 1.6; color: #c8c8c8;">
               A partir de ahora, ya no tenés que depender de estadísticas genéricas. Analizamos las dos composiciones en tiempo real para darte el <strong>game plan</strong> que realmente necesitás para ganar.
             </p>
             
