@@ -1189,6 +1189,7 @@ export default function App() {
           region: data.region,
           tier: data.tier,
           generations_today: data.generations_today,
+          profileSetupComplete: data.profile_setup_complete,
           isIncomplete: !data.profile_setup_complete
         });
         if (!data.profile_setup_complete) setShowCompleteModal(true);
@@ -1365,7 +1366,17 @@ export default function App() {
       if (error) throw error;
       
       // Actualizar estado local directamente (evita race condition en re-fetch)
-      setUser(prev => ({ ...prev, username: u, region: r, isIncomplete: false }));
+      const isFirstTime = !user.profileSetupComplete;
+      setUser(prev => ({ ...prev, username: u, region: r, isIncomplete: false, profileSetupComplete: true }));
+      
+      // Enviar email de bienvenida si es la primera vez
+      if (isFirstTime) {
+        fetch('/api/welcome-email', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: user.email, username: u })
+        }).catch(err => console.error("Error sending welcome email:", err));
+      }
       
       setShowCompleteModal(false);
       setProfileLoading(false);

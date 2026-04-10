@@ -30,12 +30,14 @@ const CompleteProfileModal = React.memo(({ onSave, loading, initialUsername = ""
           <div>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#5b5a56", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Nombre de Invocador</label>
             <input className="auth-input" type="text" placeholder="Tu nombre en LoL"
-              value={username} onChange={(e) => setUsername(e.target.value)} />
+              value={username} onChange={(e) => setUsername(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && username) onSave(username, region); }} />
           </div>
           <div>
             <label style={{ display: "block", fontSize: 11, fontWeight: 700, color: "#5b5a56", textTransform: "uppercase", letterSpacing: 1, marginBottom: 8 }}>Región</label>
             <select className="auth-select" value={region}
-              onChange={(e) => setRegion(e.target.value)}>
+              onChange={(e) => setRegion(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter' && username) onSave(username, region); }}>
               {REGIONS.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
