@@ -1423,6 +1423,7 @@ export default function App() {
   const css = `
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap');
     * { margin:0; padding:0; box-sizing:border-box; }
+    input, button, select, textarea { font-family: inherit; }
     html { scroll-behavior:smooth; }
     body { background:#080810; color:#c8c8c8; font-family:'Outfit',sans-serif; overflow-x:hidden; }
     ::selection { background:rgba(200,155,60,0.3); color:#f0e6d2; }
@@ -1574,7 +1575,7 @@ export default function App() {
                   }}>
                     <button onClick={() => setPage("settings")} style={{
                       width:"100%", textAlign:"left", padding:"10px 12px", background:"none", border:"none",
-                      color:"#c8c8c8", fontSize:13, fontWeight:600, borderRadius:8, cursor:"pointer",
+                      color:"#c8c8c8", fontSize:13, fontWeight:600, borderRadius:8, cursor:"pointer", fontFamily: "inherit",
                       display:"flex", alignItems:"center", gap:10, transition:"all 0.2s"
                     }} onMouseEnter={e => { e.currentTarget.style.background="rgba(200,155,60,0.1)"; e.currentTarget.style.color="#c89b3c"; }} onMouseLeave={e => { e.currentTarget.style.background="none"; e.currentTarget.style.color="#c8c8c8"; }}>
                       <span>⚙️</span> Ajustes
@@ -1582,7 +1583,7 @@ export default function App() {
                     <div style={{ height:1, background:"rgba(255,255,255,0.04)", margin:"4px 0" }} />
                     <button onClick={logout} style={{
                       width:"100%", textAlign:"left", padding:"10px 12px", background:"none", border:"none",
-                      color:"#e84057", fontSize:13, fontWeight:600, borderRadius:8, cursor:"pointer",
+                      color:"#e84057", fontSize:13, fontWeight:600, borderRadius:8, cursor:"pointer", fontFamily: "inherit",
                       display:"flex", alignItems:"center", gap:10, transition:"all 0.2s"
                     }} onMouseEnter={e => e.currentTarget.style.background="rgba(232,64,87,0.08)"} onMouseLeave={e => e.currentTarget.style.background="none"}>
                       <span>🚪</span> Salir
