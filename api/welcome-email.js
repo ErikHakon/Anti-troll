@@ -22,10 +22,7 @@ export default async function handler(req, res) {
         <div style="background-color: #0d0d1a; color: #c8c8c8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid rgba(200, 155, 60, 0.2);">
           <!-- Header -->
           <div style="background-color: #080810; padding: 30px; text-align: center;">
-            <img src="https://untroll.gg/favicon.svg" 
-                 width="48" height="48" 
-                 alt="UnTroll" 
-                 style="display:block; margin: 0 auto 16px auto;">
+            <div style="width:56px; height:56px; background:#c89b3c; border-radius:12px; display:inline-block; line-height:56px; font-size:28px; text-align:center; margin:0 auto 16px auto;">⚡</div>
             <h1 style="color: #c89b3c; font-size: 32px; font-weight: 900; margin: 0; letter-spacing: 2px;">UNTROLL</h1>
             <p style="color: #ffffff; font-size: 14px; margin: 5px 0 0; opacity: 0.8; letter-spacing: 1px;">Tu coach challenger personal de LoL</p>
           </div>
