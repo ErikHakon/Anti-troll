@@ -1168,6 +1168,7 @@ export default function App() {
         // para forzar al usuario a elegir su Summoner Name real.
         const newProfile = {
           id: authUser.id,
+          email: authUser.email,
           username: null, 
           region: null,
           tier: "free",
@@ -1297,9 +1298,26 @@ export default function App() {
         // Con sesión activa, onAuthStateChange dispara fetchProfile automáticamente
       } else {
         if (!authForm.email || !authForm.password) {
-          setAuthError("Completá email y contraseña");
+          setAuthError("Completá tu usuario/email y contraseña");
           setAuthLoading(false);
           return;
+        }
+
+        // Resolver username a email si no contiene @
+        let loginEmail = authForm.email.trim();
+        if (!loginEmail.includes("@")) {
+          const { data: profileData, error: profileError } = await supabase
+            .from("profiles")
+            .select("email")
+            .ilike("username", loginEmail)
+            .single();
+
+          if (profileError || !profileData?.email) {
+            setAuthError("No encontramos ese nombre de invocador");
+            setAuthLoading(false);
+            return;
+          }
+          loginEmail = profileData.email;
         }
 
         // Con 3+ intentos: el widget hCaptcha es visible y el usuario debe completarlo
@@ -1322,7 +1340,7 @@ export default function App() {
         }
 
         const { data, error } = await supabase.auth.signInWithPassword({
-          email: authForm.email,
+          email: loginEmail,
           password: authForm.password,
           options: { captchaToken: loginCaptchaToken || undefined },
         });
@@ -1773,15 +1791,15 @@ export default function App() {
                 )}
 
                 <div>
-                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:"1px", marginBottom:6 }}>Email</label>
-                  <input className="auth-input" type="email" placeholder="tu@email.com"
-                    value={authForm.email} onChange={(e) => setAuthForm({...authForm, email: e.target.value})} />
+                  <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:"1px", marginBottom:6 }}>{authMode === "login" ? "Email o nombre de invocador" : "Email"}</label>
+                  <input className="auth-input" type={authMode === "login" ? "text" : "email"} placeholder={authMode === "login" ? "tu@email.com o NombreInvocador" : "tu@email.com"}
+                    value={authForm.email} autoComplete="email" name="email" onChange={(e) => setAuthForm({...authForm, email: e.target.value})} />
                 </div>
 
                 <div style={{ position:"relative" }}>
                   <label style={{ display:"block", fontSize:11, fontWeight:700, color:"#5b5a56", textTransform:"uppercase", letterSpacing:"1px", marginBottom:6 }}>Contraseña</label>
                   <input className="auth-input" type={showPass ? "text" : "password"} placeholder={authMode === "register" ? "Mínimo 6 caracteres" : "Tu contraseña"}
-                    value={authForm.password} onChange={(e) => setAuthForm({...authForm, password: e.target.value})} />
+                    value={authForm.password} autoComplete={authMode === "login" ? "current-password" : "new-password"} name="password" onChange={(e) => setAuthForm({...authForm, password: e.target.value})} />
                   <button type="button" onClick={() => setShowPass(!showPass)} style={{ position:"absolute", right:12, bottom:12, background:"none", border:"none", color:"#5b5a56", cursor:"pointer", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>
                     {showPass ? (
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
