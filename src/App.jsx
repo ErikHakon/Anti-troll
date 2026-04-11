@@ -1286,9 +1286,15 @@ export default function App() {
           setAuthError("Este email ya está registrado. ¿Querés iniciar sesión?");
           setAuthLoading(false);
           return;
-        } else {
-          setPage("home");
         }
+        // Si hay sesión activa inmediata (confirm email desactivado), onAuthStateChange
+        // se encarga de cargar el perfil. Solo redirigimos si no hay sesión todavía.
+        if (!data.session) {
+          setAuthError("Revisá tu email para confirmar tu cuenta.");
+          setAuthLoading(false);
+          return;
+        }
+        // Con sesión activa, onAuthStateChange dispara fetchProfile automáticamente
       } else {
         if (!authForm.email || !authForm.password) {
           setAuthError("Completá email y contraseña");
