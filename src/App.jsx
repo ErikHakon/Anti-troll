@@ -142,7 +142,7 @@ function ResultSection({ title, icon, color, children }) {
 }
 
 function normalize(str) {
-  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['\s]/g, "").trim();
+  return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['\-]/g, " ").replace(/[^a-z0-9\s]/g, "").trim();
 }
 
 // Only for items where AI name shares ZERO words with DDragon name
