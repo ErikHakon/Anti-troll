@@ -731,21 +731,11 @@ function CoachTool({ user }) {
       });
 
       if (!res.ok) {
-        if (res.status === 429) {
-          const errData = await res.json().catch(() => ({}));
-          throw new Error(errData.error || "Demasiadas consultas. Esperá un momento.");
-        }
         if (res.status === 504) {
-          throw new Error("La IA tardó demasiado. Intentá con menos campeones opcionales o probá de nuevo.");
-        }
-        if (res.status === 422) {
-          const errData = await res.json().catch(() => ({}));
-          if (errData.error === "max_tokens_exceeded") {
-            throw new Error("La respuesta fue muy larga. Intentá con menos campeones seleccionados.");
-          }
+          throw new Error("La IA tardó demasiado. Intentá con menos campeones seleccionados o probá de nuevo.");
         }
         const errData = await res.json().catch(() => ({}));
-        throw new Error(errData.error?.message || errData.error || `Error del servidor (${res.status})`);
+        throw new Error(errData.error || `Error del servidor (${res.status})`);
       }
 
       const data = await res.json();

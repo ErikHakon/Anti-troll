@@ -180,12 +180,22 @@ export default async function handler(req, res) {
     const data = await response.json();
 
     if (!response.ok) {
-      return res.status(response.status).json(data);
+      const anthropicError = data.error || {};
+      const type = anthropicError.type;
+      const message = anthropicError.message || "";
+
+      if (type === "insufficient_funds" || message.includes("credit") || response.status === 402) {
+        return res.status(402).json({ error: "El servicio no está disponible temporalmente. Intentá más tarde." });
+      }
+      if (response.status === 429 || type === "rate_limit_error") {
+        return res.status(429).json({ error: "Demasiadas consultas. Esperá unos segundos antes de reintentar." });
+      }
+      return res.status(503).json({ error: "El servicio de IA no está disponible en este momento. Intentá más tarde." });
     }
 
     // Detect token truncation before returning to client
     if (data.stop_reason === "max_tokens") {
-      return res.status(422).json({ error: "max_tokens_exceeded" });
+      return res.status(422).json({ error: "La respuesta fue muy larga. Intentá con menos campeones seleccionados." });
     }
 
     return res.status(200).json(data);
@@ -193,7 +203,7 @@ export default async function handler(req, res) {
     if (err.name === "AbortError") {
       return res.status(504).json({ error: "La solicitud a la IA excedió el tiempo límite." });
     }
-    return res.status(500).json({ error: err.message });
+    return res.status(503).json({ error: "Error de conexión con el proveedor de IA. Intentá más tarde." });
   } finally {
     clearTimeout(timeout);
   }
