@@ -151,8 +151,6 @@ const ITEM_NAME_ALIASES = {
   "velo de la banshee":["Banshee's Veil","Velo del hada de la muerte"],
   "velo especial":["Banshee's Veil","Velo del hada de la muerte"],
   "banshee":["Banshee's Veil","Velo del hada de la muerte"],
-  "brazo de espíritu santo":["Spirit Visage"],
-  "brazo de espiritu santo":["Spirit Visage"],
   "malla mórfica":["Jak'Sho, The Protean"],
   "malla morfica":["Jak'Sho, The Protean"],
   "malla de espinas":["Thornmail"],
@@ -160,9 +158,6 @@ const ITEM_NAME_ALIASES = {
   "malla osea":["Dead Man's Plate"],
   "fuerza de la naturaleza":["Force of Nature"],
   "cimitarra mercurial":["Mercurial Scimitar"],
-  "tonada ígnea":["Oblivion Orb"],
-  "tonada ignea":["Oblivion Orb"],
-  "quimioterapia":["Chemtech Putrifier"],
   "sed de sangre":["Bloodthirster"],
   "anillo de poder":["Doran's Ring"],
   "botas de velocidad":["Boots of Swiftness"],
@@ -666,6 +661,7 @@ function CoachTool({ user }) {
     if (l === myLane) return;
     setMyLane(l);
     setResult(null);
+    setLaneOpponent(null);
     setAllies([null,null,null,null]);
     setEnemies([null,null,null,null]);
     setAllyLanes([null,null,null,null]);
