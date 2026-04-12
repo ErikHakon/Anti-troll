@@ -157,7 +157,7 @@ export default async function handler(req, res) {
     `OTROS ENEMIGOS: ${enemyList}`;
 
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 55000);
+  const timeout = setTimeout(() => controller.abort(), 115000); // Margen para sesiones largas
 
   try {
     const response = await fetch("https://api.anthropic.com/v1/messages", {
@@ -169,17 +169,17 @@ export default async function handler(req, res) {
       },
       body: JSON.stringify({
         model: "claude-haiku-4-5-20251001",
-        max_tokens: 6000,
+        max_tokens: 3000, // Suficiente para el JSON completo de UnTroll
         temperature: 0,
+        stream: true, // Habilitar stream en Anthropic
         system: SYSTEM_MESSAGE,
         messages: [{ role: "user", content: userMessage }],
       }),
       signal: controller.signal,
     });
 
-    const data = await response.json();
-
     if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
       const anthropicError = data.error || {};
       const type = anthropicError.type;
       const message = anthropicError.message || "";
@@ -193,12 +193,41 @@ export default async function handler(req, res) {
       return res.status(503).json({ error: "El servicio de IA no está disponible en este momento. Intentá más tarde." });
     }
 
-    // Detect token truncation before returning to client
-    if (data.stop_reason === "max_tokens") {
-      return res.status(422).json({ error: "La respuesta fue muy larga. Intentá con menos campeones seleccionados." });
+    // Configuración para Streaming al cliente
+    res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+    res.setHeader('Transfer-Encoding', 'chunked');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = "";
+
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+
+      buffer += decoder.decode(value, { stream: true });
+      const lines = buffer.split('\n');
+      buffer = lines.pop(); // Guardar línea incompleta en el buffer
+
+      for (const line of lines) {
+        const trimmed = line.trim();
+        if (!trimmed || !trimmed.startsWith('data: ')) continue;
+        
+        try {
+          const json = JSON.parse(trimmed.replace('data: ', ''));
+          if (json.type === 'content_block_delta' && json.delta?.text) {
+            res.write(json.delta.text); // Enviar fragmentos de texto conforme llegan
+          }
+        } catch (e) {
+          // Ignorar chunks mal formados
+        }
+      }
     }
 
-    return res.status(200).json(data);
+    res.end();
+
   } catch (err) {
     if (err.name === "AbortError") {
       return res.status(504).json({ error: "La solicitud a la IA excedió el tiempo límite." });

@@ -738,8 +738,16 @@ function CoachTool({ user }) {
         throw new Error(errData.error || `Error del servidor (${res.status})`);
       }
 
-      const data = await res.json();
-      const text = data.content?.map(i => i.text || "").join("\n") || "";
+      // Consumir respuesta como Stream
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let text = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        text += decoder.decode(value, { stream: true });
+      }
 
       // Robust JSON extraction: find outermost braces
       const firstBrace = text.indexOf("{");
@@ -760,7 +768,7 @@ function CoachTool({ user }) {
       if (!Array.isArray(parsed.teamfight_build?.full_build)) parsed.teamfight_build.full_build = [];
       if (parsed.game_plan && !Array.isArray(parsed.game_plan.tips)) parsed.game_plan.tips = [];
 
-      return { parsed, tokensUsed: data.usage?.output_tokens || null };
+      return { parsed, tokensUsed: null };
     }
 
     try {
