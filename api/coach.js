@@ -1,4 +1,3 @@
-import { createClient } from "@supabase/supabase-js";
 
 const SYSTEM_MESSAGE = `Sos un coach challenger de League of Legends experto en Season 2025.
 Tu tarea es analizar la composición de ambos equipos y generar un game plan completo EN ESPAÑOL.
@@ -112,25 +111,6 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Demasiadas consultas. Esperá un momento antes de continuar." });
   }
 
-  // Layer 2: Supabase-based Rate Limiting (20 analysis/day)
-  const authHeader = req.headers.authorization;
-  if (authHeader && authHeader.startsWith("Bearer ")) {
-    const token = authHeader.split(" ")[1];
-    const supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_KEY);
-    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
-
-    if (user && !authError) {
-      // Call Supabase RPC function (assumed to exist in DB as per user instructions)
-      const { data: canProceed, error: rpcError } = await supabaseAdmin.rpc("check_rate_limit", { user_id: user.id });
-      if (rpcError) console.error("RPC Error:", rpcError);
-      
-      if (canProceed === false) {
-        return res.status(429).json({ error: "Límite diario alcanzado (20 análisis/día). Volvé mañana." });
-      }
-    }
-  }
-
-
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
   }
@@ -178,6 +158,8 @@ export default async function handler(req, res) {
     });
 
     const data = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
       const anthropicError = data.error || {};
       const type = anthropicError.type;
       const message = anthropicError.message || "";
