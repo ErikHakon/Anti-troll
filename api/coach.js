@@ -33,6 +33,11 @@ INSTRUCCIONES DE RUNAS:
 INSTRUCCIONES DE VOCABULARIO:
 - En los textos sobre wards, usá el verbo "wardear" conjugado correctamente en español (ej: "wardeá el río", "wardear el objetivo", "wardeando la base enemiga"). NUNCA uses "warden" ni "warding".
 
+INSTRUCCIONES DE REDACCIÓN:
+- Usá español latinoamericano neutro y fluido, sin errores ortográficos.
+- El verbo es 'iniciar' (no 'initiar'). 
+- Revisá que todos los verbos y sustantivos estén correctamente escritos.
+
 FORMATO DE RESPUESTA:
 Respondé SOLO con un JSON válido. Sin markdown, sin backticks, sin texto antes o después del JSON.
 Usá esta estructura exacta:
