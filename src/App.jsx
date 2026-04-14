@@ -1057,9 +1057,7 @@ function CoachTool({ user }) {
             </div>
             {result.teamfight_build?.situational && (
               <div style={{ background:"rgba(18,217,245,0.04)", borderRadius:8, padding:"10px 14px" }}>
-                <p style={{ margin:0, color:"#c8c0b0", fontSize:14 }}>
-                  <strong style={{ color:"#12d9f5" }}>Situacional:</strong> {result.teamfight_build?.situational}
-                </p>
+                <BuildRow label="Situacional" value={result.teamfight_build.situational} itemData={itemData} />
               </div>
             )}
           </ResultSection>
