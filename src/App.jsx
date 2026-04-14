@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "./supabaseClient";
 import HCaptcha from '@hcaptcha/react-hcaptcha';
 import CompleteProfileModal from "./CompleteProfileModal";
@@ -141,7 +141,30 @@ function ResultSection({ title, icon, color, children }) {
   );
 }
 
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false };
+  }
+  static getDerivedStateFromError(error) { return { hasError: true }; }
+  componentDidCatch(error, errorInfo) { console.error("Análisis Render Error:", error, errorInfo); }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: 30, background: "rgba(232,64,87,0.06)", border: "1px solid rgba(232,64,87,0.2)", borderRadius: 16, color: "#ff4d63", textAlign: "center", margin: "20px 0" }}>
+          <div style={{ fontSize: 40, marginBottom: 16 }}>⚠️</div>
+          <h3 style={{ marginBottom: 10, color: "#f0e6d2" }}>Error al renderizar los resultados</h3>
+          <p style={{ color: "#9a9590", marginBottom: 20 }}>La IA devolvió datos en un formato inesperado que impidió mostrar el análisis.</p>
+          <button onClick={() => window.location.reload()} style={{ background: "#ff4d63", border: "none", color: "#080810", padding: "10px 20px", borderRadius: 8, fontSize: 14, fontWeight: 800, cursor: "pointer", transition: "0.2s" }}>Recargar App</button>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
 function normalize(str) {
+  if (typeof str !== 'string') return "";
   return str.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/['\-]/g, " ").replace(/[^a-z0-9\s]/g, "").trim();
 }
 
@@ -670,7 +693,7 @@ function CoachTool({ user }) {
     setTimeout(() => setLaneWarning(false), 3000);
   };
 
-  const msgs = ["Analizando composición enemiga...","Evaluando sinergia de equipo...","Optimizando build contextual...","Generando game plan completo...","♻️ Reintentando análisis..."];
+  const msgs = ["Analizando composición enemiga...","Evaluando sinergia de equipo...","Optimizando build contextual...","Generando game plan completo..."];
   useEffect(() => {
     if (!loading) return;
     const iv = setInterval(() => setLoadingMsg(p => (p+1) % msgs.length), 2500);
@@ -770,7 +793,7 @@ function CoachTool({ user }) {
       } catch (parseErr) {
         // FIX 5 — Retry once on JSON parse/validation errors only
         if (parseErr instanceof SyntaxError) {
-          setLoadingMsg(4); // "♻️ Reintentando análisis..."
+          setLoadingMsg(2); // "Optimizando build contextual..."
           result = await attemptFetch();
         } else {
           throw parseErr; // Server errors, network errors — don't retry
@@ -940,7 +963,8 @@ function CoachTool({ user }) {
       {error && <div style={{ background:"rgba(232,64,87,0.08)", border:"1px solid rgba(232,64,87,0.25)", borderRadius:10, padding:16, color:"#e84057", fontSize:14, marginBottom:20 }}>{error}</div>}
 
       {result && (
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+        <ErrorBoundary>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
           {/* Champion Portraits Header */}
           <div className="vs-header" style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:20, padding:"20px 0 8px", position:"relative" }}>
             <button className="regen-btn" onClick={() => generate(true)} style={{
@@ -1068,7 +1092,8 @@ function CoachTool({ user }) {
           {/* 11. Ward Spots */}
           <WardSpotsCard text={result.ward_spots} />
         </div>
-      )}
+      </ErrorBoundary>
+    )}
     </div>
   );
 }
