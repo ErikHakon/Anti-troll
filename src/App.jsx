@@ -147,7 +147,7 @@ class ErrorBoundary extends React.Component {
     this.state = { hasError: false };
   }
   static getDerivedStateFromError(error) { return { hasError: true }; }
-  componentDidCatch(error, errorInfo) { console.error("Análisis Render Error:", error, errorInfo); }
+  componentDidCatch(error, errorInfo) { console.error("ERROR BOUNDARY:", error, errorInfo.componentStack); }
   render() {
     if (this.state.hasError) {
       return (
@@ -1043,7 +1043,9 @@ function CoachTool({ user }) {
             </div>
             {result.teamfight_build?.situational && (
               <div style={{ background:"rgba(18,217,245,0.04)", borderRadius:8, padding:"10px 14px" }}>
-                <BuildRow label="Situacional" value={result.teamfight_build.situational} itemData={itemData} />
+                <p style={{ margin:0, color:"#c8c0b0", fontSize:14 }}>
+                  <strong style={{ color:"#12d9f5" }}>Situacional:</strong> {result.teamfight_build?.situational}
+                </p>
               </div>
             )}
           </ResultSection>
