@@ -31,8 +31,9 @@ const LANE_ICONS = { TOP:"⚔️", MID:"🔥", JGL:"🌿", ADC:"🏹", SUP:"🛡
 const DDRAGON_VER_CACHE_KEY = "rc_ddragon_ver";
 const DDRAGON_VER_TTL = 60 * 60 * 1000; // 1 hora
 
-// Carga síncrona desde localStorage — elimina el race condition en el primer render
-let GLOBAL_DDRAGON_VER = "15.6.1";
+const DEFAULT_DDRAGON_VER = "15.6.1";
+const STOP_WORDS = new Set(["de","del","la","el","los","las","un","una","y","o","the","of","a","and","s","to","in","en"]);
+let GLOBAL_DDRAGON_VER = DEFAULT_DDRAGON_VER;
 
 function ddragonUrl(path, ver = GLOBAL_DDRAGON_VER) {
   return `https://ddragon.leagueoflegends.com/cdn/${ver}/${path}`;
@@ -51,12 +52,12 @@ const CHAMP_FILE_NAMES = {
   "Mel":"Mel",
 };
 
-function getChampIcon(name) {
+function getChampIcon(name, ver = GLOBAL_DDRAGON_VER) {
   if (!name) return "";
   const override = CHAMP_FILE_NAMES[name];
-  if (override) return ddragonUrl(`img/champion/${override}.png`);
+  if (override) return ddragonUrl(`img/champion/${override}.png`, ver);
   const f = name.replace(/['\s.]/g,"").replace("&Willump","");
-  return ddragonUrl(`img/champion/${f}.png`);
+  return ddragonUrl(`img/champion/${f}.png`, ver);
 }
 
 /* ─── Reusable Components ─── */
@@ -188,13 +189,12 @@ const ITEM_NAME_ALIASES = {
 
 // Build keyword index from DDragon data (called once after fetch)
 function buildItemKeywordIndex(itemData) {
-  const stopWords = new Set(["de","del","la","el","los","las","un","una","y","o","the","of","a","and","s","to","in","en"]);
   const keywordIndex = {}; // keyword → itemId[]
   
   const allExact = { ...itemData.exactEN, ...itemData.exactES };
   for (const [name, id] of Object.entries(allExact)) {
     const words = name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-      .split(/[\s']+/).filter(w => w.length >= 4 && !stopWords.has(w));
+      .split(/[\s']+/).filter(w => w.length >= 4 && !STOP_WORDS.has(w));
     for (const w of words) {
       if (!keywordIndex[w]) keywordIndex[w] = [];
       if (!keywordIndex[w].includes(id)) keywordIndex[w].push(id);
@@ -228,8 +228,7 @@ function findItemId(name, itemData) {
   if (itemData.normES[norm]) return itemData.normES[norm];
   // 3. Keyword match: extract words from name, check keyword index
   if (itemData.keywords) {
-    const stopWords = new Set(["de","del","la","el","los","las","un","una","y","o","the","of","a","and","s"]);
-    const words = norm.split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !stopWords.has(w));
+    const words = norm.split(/[^a-z0-9]+/).filter(w => w.length >= 4 && !STOP_WORDS.has(w));
     // Try longest/most unique words first
     const sorted = [...words].sort((a, b) => b.length - a.length);
     for (const w of sorted) {
@@ -253,9 +252,9 @@ function findRuneIcon(name, runeData) {
   return null;
 }
 
-function ChampPortrait({ name, size = 32, border = "none", shadow = "none", style = {} }) {
+function ChampPortrait({ name, size = 32, border = "none", shadow = "none", style = {}, ver = GLOBAL_DDRAGON_VER }) {
   const [error, setError] = useState(false);
-  const iconUrl = getChampIcon(name);
+  const iconUrl = getChampIcon(name, ver);
 
   if (error || !name) {
     const initial = name ? name.charAt(0) : "?";
@@ -593,10 +592,9 @@ function WardSpotsCard({ text }) {
 }
 
 /* ─── Coach Tool ─── */
-function CoachTool({ user }) {
+function CoachTool({ user, ddragonVer }) {
   const [myChamp, setMyChamp] = useState(null);
   const [myLane, setMyLane] = useState("MID");
-  const [ddVer, setDdVer] = useState(GLOBAL_DDRAGON_VER);
   const [laneOpponent, setLaneOpponent] = useState(null);
   const [enemies, setEnemies] = useState([null,null,null,null]);
   const [enemyLanes, setEnemyLanes] = useState([null,null,null,null]);
@@ -613,27 +611,9 @@ function CoachTool({ user }) {
   const [buildType, setBuildType] = useState("auto");
 
   useEffect(() => {
-    const loadVersion = async () => {
-      let currentVer = GLOBAL_DDRAGON_VER;
-      try {
-        const c = JSON.parse(localStorage.getItem(DDRAGON_VER_CACHE_KEY) || "null");
-        if (c?.ver && Date.now() - c.ts < DDRAGON_VER_TTL) {
-          currentVer = c.ver;
-        } else {
-          const res = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
-          const v = await res.json();
-          if (v?.[0]) {
-            currentVer = v[0];
-            localStorage.setItem(DDRAGON_VER_CACHE_KEY, JSON.stringify({ ver: v[0], ts: Date.now() }));
-          }
-        }
-      } catch (e) {}
-      GLOBAL_DDRAGON_VER = currentVer;
-      setDdVer(currentVer);
-      return currentVer;
-    };
-
-    loadVersion().then((actualVer) => {
+    // Data update when version changes or on mount
+    if (!ddragonVer) return;
+    const actualVer = ddragonVer;
       Promise.all([
         fetch(ddragonUrl("data/en_US/item.json", actualVer)).then(r => r.json()),
         fetch(ddragonUrl("data/es_ES/item.json", actualVer)).then(r => r.json()),
@@ -679,8 +659,7 @@ function CoachTool({ user }) {
         addRunes(esRunes);
         setRuneData({ exact, normalized });
       }).catch(() => {});
-    });
-  }, []);
+  }, [ddragonVer]);
   
   const handleLaneChange = (l) => {
     if (l === myLane) return;
@@ -1137,6 +1116,7 @@ function Toast({ message, type, onClose }) {
 /* ─── Main App ─── */
 export default function App() {
   const [page, setPage] = useState("home");
+  const [ddragonVer, setDdragonVer] = useState(DEFAULT_DDRAGON_VER);
   const [scrollY, setScrollY] = useState(0);
   const [toast, setToast] = useState(null);
 
@@ -1166,6 +1146,27 @@ export default function App() {
   const [registerCaptchaNeeded, setRegisterCaptchaNeeded] = useState(false);
 
   const REGIONS = ["LAS","LAN","NA","EUW","EUNE","KR","JP","BR","OCE","TR","RU"];
+
+  // FIX A: Centralizar carga de versión en App root
+  useEffect(() => {
+    const loadVersion = async () => {
+      let currentVer = DEFAULT_DDRAGON_VER;
+      try {
+        const cached = JSON.parse(localStorage.getItem(DDRAGON_VER_CACHE_KEY) || "null");
+        if (cached?.ver && Date.now() - cached.ts < DDRAGON_VER_TTL) {
+          currentVer = cached.ver;
+        } else {
+          const res = await fetch("https://ddragon.leagueoflegends.com/api/versions.json");
+          const v = await res.json();
+          if (v?.[0]) currentVer = v[0];
+          localStorage.setItem(DDRAGON_VER_CACHE_KEY, JSON.stringify({ ver: currentVer, ts: Date.now() }));
+        }
+      } catch (e) {}
+      GLOBAL_DDRAGON_VER = currentVer;
+      setDdragonVer(currentVer);
+    };
+    loadVersion();
+  }, []);
 
   // Listen for auth state changes (login, logout, token refresh)
   useEffect(() => {
@@ -1254,9 +1255,9 @@ export default function App() {
       }
     } catch (err) {
       console.error("Error fetching/creating profile:", err);
+    } finally {
       setSessionLoading(false);
     }
-    setSessionLoading(false);
   };
 
   const handleOAuth = async (provider) => {
@@ -2137,7 +2138,7 @@ export default function App() {
               <h2 style={{ fontSize:42, fontWeight:900, color:"#f0e6d2", letterSpacing:"-1px", marginBottom:8 }}>AI Coach</h2>
               <p style={{ color:"#6a6a6a", fontSize:16 }}>Seleccioná los campeones y generá tu game plan</p>
             </div>
-            <CoachTool user={user} />
+            <CoachTool user={user} ddragonVer={ddragonVer} />
           </div>
 
           {/* Features */}
