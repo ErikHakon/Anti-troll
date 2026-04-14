@@ -766,10 +766,22 @@ function CoachTool({ user }) {
 
       // Robust JSON extraction: find outermost braces
       const firstBrace = text.indexOf("{");
-      const lastBrace = text.lastIndexOf("}");
-      if (firstBrace === -1 || lastBrace === -1) {
-        throw new SyntaxError("La IA no devolvió un JSON válido");
+      if (firstBrace === -1) throw new SyntaxError("La IA no devolvió un JSON válido");
+
+      let depth = 0;
+      let lastBrace = -1;
+      for (let i = firstBrace; i < text.length; i++) {
+        if (text[i] === "{") depth++;
+        else if (text[i] === "}") {
+          depth--;
+          if (depth === 0) {
+            lastBrace = i;
+            break;
+          }
+        }
       }
+
+      if (lastBrace === -1) throw new SyntaxError("La IA no devolvió un JSON válido");
       const parsed = JSON.parse(text.slice(firstBrace, lastBrace + 1));
 
       if (!parsed.laning_build || !parsed.teamfight_build) {
