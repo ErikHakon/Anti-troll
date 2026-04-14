@@ -185,6 +185,16 @@ const ITEM_NAME_ALIASES = {
   "sed de sangre":["Bloodthirster"],
   "anillo de poder":["Doran's Ring"],
   "botas de velocidad":["Boots of Swiftness"],
+  // Ornn Masterwork Upgrades (Legacy names used by AI)
+  "forgefire crest":["Sunfire Aegis", "Égida de fuego solar"],
+  "cresta de forja":["Sunfire Aegis", "Égida de fuego solar"],
+  "the leviathan":["Heartsteel", "Corazón de acero"],
+  "el leviatan":["Heartsteel", "Corazón de acero"],
+  "the unspoken promise":["Jak'Sho, The Protean", "Jak'Sho, el Proteico"],
+  "rabadon's ascendance":["Rabadon's Deathcap", "Sombrero mortal de Rabadon"],
+  "ascendencia de rabadon":["Rabadon's Deathcap", "Sombrero mortal de Rabadon"],
+  "eternal winter":["Everfrost", "Invierno Eterno"],
+  "dragonhead stoneplate":["Gargoyle Stoneplate"],
 };
 
 // Build keyword index from DDragon data (called once after fetch)
