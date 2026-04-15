@@ -254,10 +254,15 @@ function findRuneIcon(name, runeData) {
   if (runeData.exact[trimmed]) return runeData.exact[trimmed];
   const norm = normalize(trimmed);
   if (runeData.normalized[norm]) return runeData.normalized[norm];
+  const normWords = norm.split(/\s+/).filter(Boolean);
+  if (normWords.length === 0) return null;
+
   const normKeys = Object.keys(runeData.normalized);
   for (const k of normKeys) {
-    // Only allow substring matching for long, distinctive terms
-    if (k === norm || (norm.length > 6 && k.includes(norm))) return runeData.normalized[k];
+    const kWords = k.split(/\s+/);
+    // Verifica que cada palabra de la búsqueda esté presente como palabra completa en la clave
+    const allWordsMatch = normWords.every(nw => kWords.includes(nw));
+    if (allWordsMatch) return runeData.normalized[k];
   }
   return null;
 }
