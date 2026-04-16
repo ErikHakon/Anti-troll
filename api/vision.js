@@ -32,34 +32,22 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a loading screen screenshot.
-
-LAYOUT OF THE LOADING SCREEN:
-- There are 2 rows of 5 champion cards each.
-- Top row = blue team (ally team), bottom row = red team (enemy team).
-- Within each row, cards are ordered LEFT TO RIGHT as: top, jungle, mid, adc, support.
-- Each card has: a large portrait, the skin name above, and the CHAMPION NAME in 
-  bold white text below the portrait. Always read that bold text to get the champion name.
-- Below the champion name is the summoner name. 
-  The user's summoner name is highlighted in YELLOW or GOLDEN color.
-
-YOUR TASKS:
-1. Read the bold white champion name text under each portrait for all 10 champions.
-2. Assign lanes by horizontal position left-to-right: 1st=top, 2nd=jungle, 3rd=mid, 4th=adc, 5th=support.
-3. Identify the user's champion by finding the golden/yellow summoner name — 
-   read the bold champion name directly above that golden text.
-
+  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a League of Legends loading screen screenshot.
+The user's champion is identified by their summoner name appearing in yellow/golden color.
+In the loading screen, each team's 5 champions are displayed horizontally left to right 
+in this exact lane order: top, jungle, mid, adc, support.
 Respond ONLY with valid JSON, no markdown, no explanation.`;
 
-  const USER_PROMPT = `Analyze this League of Legends loading screen.
+  const USER_PROMPT = `Analyze this League of Legends loading screen screenshot.
+Identify all 10 champions and their lanes.
 
-Top row = blue team (5 champions, left to right: top, jungle, mid, adc, support).
-Bottom row = red team (5 champions, left to right: top, jungle, mid, adc, support).
+Lane assignment rule: within each team row, champions appear left to right as:
+1st = top, 2nd = jungle, 3rd = mid, 4th = adc, 5th = support.
 
-For each champion card: read the bold white text below the portrait — that is the champion name.
-Find the golden/yellow summoner name — the bold text just above it is the user's champion.
+User identification rule: find the summoner name in yellow/gold color — 
+the champion in that card is the userChampion.
 
-Respond with this exact JSON:
+Respond with this exact JSON structure:
 {
   "userChampion": {
     "champion": "ChampionName",
