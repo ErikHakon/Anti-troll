@@ -32,21 +32,42 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You are analyzing a League of Legends loading screen image.
-Read the text written on the champion cards. Do not guess or infer — only read what is visible.
+  const SYSTEM_PROMPT = `You are analyzing a League of Legends screenshot.
+Read the text visible on screen. Do not guess or infer — only report what you see.
+Champion names MUST be returned in Title Case (e.g. "Shaco", "Vel'Koz", "Miss Fortune"), never ALL CAPS.
 Respond ONLY with valid JSON, no markdown, no explanation.`;
 
-  const USER_PROMPT = `Look at this League of Legends loading screen.
-There are two rows of 5 champion cards. Each card has the champion name written in bold white text.
+  const USER_PROMPT = `Identify which type of League of Legends screen this is:
 
-1. Read the 5 champion names on the TOP row, left to right → these are blueTeam[0..4]
-2. Read the 5 champion names on the BOTTOM row, left to right → these are redTeam[0..4]
-3. Find the summoner name written in YELLOW or GOLD color. The champion name on that same card is the userChampion.
+TYPE A — "loading": two HORIZONTAL rows of 5 large champion cards. Top row = blue team, bottom row = red team. No lane labels.
+
+TYPE B — "champion_select": an equip/prepare screen. A VERTICAL list of 5 allied champions on the LEFT with LANE LABELS above each champion name. Labels can be in Spanish (SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) or English (TOP, JUNGLE, MID, ADC, SUPPORT). Enemy champions appear on the RIGHT side as a vertical list WITHOUT lane labels.
+
+Lane label mapping (Spanish → English):
+- SUPERIOR → "top"
+- JUNGLA → "jgl"
+- CENTRAL → "mid"
+- INFERIOR → "adc"
+- SOPORTE → "sup"
+
+If TYPE A (loading):
+- blueTeam = 5 champion names from top row, left to right
+- redTeam = 5 champion names from bottom row, left to right
+- blueLanes = null
+
+If TYPE B (champion_select):
+- blueTeam = 5 ally champion names (left column, top to bottom)
+- blueLanes = 5 lane values for blueTeam in the same order, read from labels
+- redTeam = 5 enemy champion names (right column, top to bottom)
+
+For BOTH types: find the summoner name in YELLOW/GOLD — that champion is userChampion.
 
 Respond with:
 {
+  "screenType": "loading" | "champion_select",
   "blueTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "redTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
+  "blueLanes": ["top", "jgl", "mid", "adc", "sup"] or null,
   "userChampion": "ChampionName",
   "confidence": "high|medium|low"
 }`;

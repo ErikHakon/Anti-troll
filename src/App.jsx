@@ -640,13 +640,19 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
           )}
         </div>
         
+        {(!localComp.userChampion.lane || localComp.allies.some(a => !a.lane) || localComp.enemies.some(e => !e.lane)) && (
+          <div style={{ padding:"10px 28px", color:"#ffb347", fontSize:12, textAlign:"center", background:"rgba(255,179,71,0.08)", borderTop:"1px solid rgba(255,179,71,0.2)" }}>
+            ⚠️ Asigná todos los roles antes de continuar
+          </div>
+        )}
+
         <div style={{ overflowY:"auto", padding:"20px 28px", display:"flex", flexDirection:"column", gap:20 }}>
           <section>
             <div style={{ fontSize:11, fontWeight:800, color:"#d4a843", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Tu Campeón</div>
             <div style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(200,155,60,0.05)", padding:12, borderRadius:12, border:"1px solid rgba(200,155,60,0.15)" }}>
               <ChampPortrait name={localComp.userChampion.champion} size={40} />
               <div style={{ flex:1, fontWeight:700, color:"#f0e6d2" }}>{localComp.userChampion.champion}</div>
-              <MiniLaneSelector value={localComp.userChampion.lane.toUpperCase()} onChange={(l) => updateProp('user', null, 'lane', l.toLowerCase())} />
+              <MiniLaneSelector value={localComp.userChampion.lane ? localComp.userChampion.lane.toUpperCase() : ""} onChange={(l) => updateProp('user', null, 'lane', l.toLowerCase())} />
             </div>
           </section>
 
@@ -657,7 +663,7 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
                 <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(29,186,90,0.05)", padding:"8px 12px", borderRadius:10 }}>
                   <ChampPortrait name={a.champion} size={32} />
                   <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{a.champion}</div>
-                  <MiniLaneSelector value={a.lane.toUpperCase()} onChange={(l) => updateProp('allies', i, 'lane', l.toLowerCase())} />
+                  <MiniLaneSelector value={a.lane ? a.lane.toUpperCase() : ""} onChange={(l) => updateProp('allies', i, 'lane', l.toLowerCase())} />
                   <button
                     onClick={() => swapWithUser(i)}
                     title="Este es mi campeón"
@@ -689,7 +695,7 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
                 <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(232,64,87,0.05)", padding:"8px 12px", borderRadius:10 }}>
                   <ChampPortrait name={e.champion} size={32} />
                   <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{e.champion}</div>
-                  <MiniLaneSelector value={e.lane.toUpperCase()} onChange={(l) => updateProp('enemies', i, 'lane', l.toLowerCase())} />
+                  <MiniLaneSelector value={e.lane ? e.lane.toUpperCase() : ""} onChange={(l) => updateProp('enemies', i, 'lane', l.toLowerCase())} />
                 </div>
               ))}
             </div>
@@ -698,7 +704,28 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
 
         <div style={{ padding:"20px 28px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:12 }}>
           <button onClick={onCancel} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.05)", border:"none", borderRadius:10, color:"#9a9590", fontWeight:700, cursor:"pointer" }}>Cancelar</button>
-          <button onClick={() => onConfirm(localComp)} style={{ flex:2, padding:"14px", background:"#c89b3c", border:"none", borderRadius:10, color:"#0a0a1a", fontWeight:800, textTransform:"uppercase", cursor:"pointer", boxShadow:"0 4px 16px rgba(200,155,60,0.2)" }}>Confirmar y Analizar</button>
+          {(() => {
+            const allLanesSet = !!localComp.userChampion.lane && 
+              localComp.allies.every(a => a.lane) && 
+              localComp.enemies.every(e => e.lane);
+            return (
+              <button 
+                onClick={() => onConfirm(localComp)} 
+                disabled={!allLanesSet}
+                style={{ 
+                  flex:2, padding:"14px", 
+                  background: allLanesSet ? "#c89b3c" : "rgba(200,155,60,0.3)", 
+                  border:"none", borderRadius:10, 
+                  color:"#0a0a1a", fontWeight:800, 
+                  textTransform:"uppercase", 
+                  cursor: allLanesSet ? "pointer" : "not-allowed",
+                  boxShadow: allLanesSet ? "0 4px 16px rgba(200,155,60,0.2)" : "none"
+                }}
+              >
+                Confirmar y Analizar
+              </button>
+            );
+          })()}
         </div>
       </div>
     </div>
@@ -764,30 +791,47 @@ function CoachTool({ user, ddragonVer }) {
           return;
         }
 
-        const L = ["TOP", "JGL", "MID", "ADC", "SUP"];
-        const userIndex = data.blueTeam.indexOf(data.userChampion);
-        const userLane = userIndex !== -1 ? L[userIndex] : L[2]; // Default MID si no se encuentra
+        // Normalizar nombres a Title Case (fix para íconos rotos cuando la IA devuelve MAYÚSCULAS)
+        const toTitleCase = (s) => {
+          if (!s) return s;
+          return s.toLowerCase().replace(/(^|[\s'\-.])(\w)/g, (m, sep, ch) => sep + ch.toUpperCase());
+        };
 
-        // Obtener aliados (los otros 4 del blueTeam)
-        const blueWithoutUser = userIndex !== -1
-          ? data.blueTeam.filter((_, i) => i !== userIndex)
-          : data.blueTeam.slice(0, 4);
+        const blueTeam = (data.blueTeam || []).map(toTitleCase);
+        const redTeam = (data.redTeam || []).map(toTitleCase);
+        const userChampion = toTitleCase(data.userChampion);
 
-        const allies = blueWithoutUser.map((champion) => {
-          const originalIndex = data.blueTeam.indexOf(champion);
-          return { champion, lane: L[originalIndex] };
-        });
+        const POSITIONAL_LANES = ["top", "jgl", "mid", "adc", "sup"];
+        const isChampSelect = data.screenType === "champion_select";
 
-        const enemies = data.redTeam.map((champion, i) => ({
+        const blueLanes = isChampSelect && Array.isArray(data.blueLanes)
+          ? data.blueLanes
+          : POSITIONAL_LANES;
+
+        const redLanes = isChampSelect
+          ? [null, null, null, null, null]
+          : POSITIONAL_LANES;
+
+        let userIndex = blueTeam.indexOf(userChampion);
+        if (userIndex === -1) userIndex = 0;
+
+        const userLane = blueLanes[userIndex] || null;
+
+        const allies = blueTeam
+          .map((champion, i) => ({ champion, lane: blueLanes[i] }))
+          .filter((_, i) => i !== userIndex);
+
+        const enemies = redTeam.map((champion, i) => ({
           champion,
-          lane: L[i],
+          lane: redLanes[i],
         }));
 
         const transformed = {
-          userChampion: { champion: data.userChampion, lane: userLane },
+          userChampion: { champion: userChampion, lane: userLane },
           allies,
           enemies,
           confidence: data.confidence,
+          screenType: data.screenType,
         };
 
         setDetectedComposition(transformed);
