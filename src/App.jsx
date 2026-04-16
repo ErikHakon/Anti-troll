@@ -791,6 +791,20 @@ function CoachTool({ user, ddragonVer }) {
           return;
         }
 
+        // Normalizar carriles a valores canónicos de la app
+        const normalizeLane = (lane) => {
+          if (!lane) return null;
+          const l = String(lane).toLowerCase().trim();
+          const map = {
+            top: "top", superior: "top", toplane: "top",
+            jungle: "jgl", jgl: "jgl", jg: "jgl", jungla: "jgl", jung: "jgl",
+            mid: "mid", middle: "mid", central: "mid", midlane: "mid",
+            adc: "adc", bot: "adc", bottom: "adc", inferior: "adc", marksman: "adc", botlane: "adc",
+            sup: "sup", support: "sup", soporte: "sup", supp: "sup", suppport: "sup",
+          };
+          return map[l] || null;
+        };
+
         // Normalizar nombres a Title Case (fix para íconos rotos cuando la IA devuelve MAYÚSCULAS)
         const toTitleCase = (s) => {
           if (!s) return s;
@@ -805,7 +819,7 @@ function CoachTool({ user, ddragonVer }) {
         const isChampSelect = data.screenType === "champion_select";
 
         const blueLanes = isChampSelect && Array.isArray(data.blueLanes)
-          ? data.blueLanes
+          ? data.blueLanes.map(normalizeLane)
           : POSITIONAL_LANES;
 
         const redLanes = isChampSelect
