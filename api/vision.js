@@ -44,7 +44,11 @@ TYPE A — "loading": two HORIZONTAL rows of 5 large champion cards. Top row = b
 TYPE B — "champion_select": an equip/prepare screen. A VERTICAL list of 5 allied champions on the LEFT with LANE LABELS above each champion name. Labels can be in Spanish (SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) or English (TOP, JUNGLE, MID, ADC, SUPPORT). Enemy champions appear on the RIGHT side as a vertical list WITHOUT lane labels.
 
 CRITICAL lane value rules:
-blueLanes MUST contain ONLY these 5 exact string values: "top", "jgl", "mid", "adc", "sup".
+blueLanes MUST be an array of EXACTLY 5 strings, one per ally champion, in the same order as blueTeam.
+Each value MUST be one of: "top", "jgl", "mid", "adc", "sup".
+All 5 lane values MUST appear exactly once in blueLanes (never repeat, never omit).
+If you can't read one label clearly, infer the missing lane by elimination
+(the 5 roles always appear once each in a standard game).
 Translate whatever label you see to one of these 5 values. Use your knowledge of
 League of Legends role terminology in any language.
 Examples of translation (not exhaustive — apply the same logic for any variant):
@@ -58,6 +62,15 @@ Examples of translation (not exhaustive — apply the same logic for any variant
 If a label uses a word you don't recognize, infer the role from context
 (position in the list, champion identity, etc.) and return the closest of
 the 5 canonical values. Never return the original label text.
+
+For BOTH types: the user's champion is identified by their SUMMONER NAME (not skin name) highlighted in YELLOW or GOLDEN color.
+In a LOADING SCREEN card, text is laid out TOP to BOTTOM as:
+1. Skin name (top, smaller text)
+2. Champion name (middle, bold, large white text)
+3. Summoner name (bottom, colored)
+The yellow/gold color appears on the BOTTOM text of one specific card — that bottom text is the user's summoner name. Identify the champion on that same card (the middle bold text). That is the userChampion.
+
+In a CHAMPION SELECT screen, the summoner name appears below each ally champion name on the left side. Find the one in yellow/gold and the champion directly above it is the userChampion.
 
 If TYPE A (loading):
 - blueTeam = 5 champion names from top row, left to right
