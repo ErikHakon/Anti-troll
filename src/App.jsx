@@ -606,6 +606,76 @@ function WardSpotsCard({ text }) {
   );
 }
 
+
+/* ─── Screenshot Components ─── */
+function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
+  const [localComp, setLocalComp] = useState(JSON.parse(JSON.stringify(composition)));
+
+  const updateProp = (type, index, field, value) => {
+    const updated = { ...localComp };
+    if (type === 'user') updated.userChampion[field] = value;
+    else updated[type][index][field] = value;
+    setLocalComp(updated);
+  };
+
+  return (
+    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20, backdropFilter:"blur(4px)" }}>
+      <div style={{ background:"#12121f", border:"1px solid rgba(200,155,60,0.3)", borderRadius:16, maxWidth:600, width:"100%", maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 64px rgba(0,0,0,0.8)" }}>
+        <div style={{ padding:"24px 28px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+          <h2 style={{ margin:0, color:"#c89b3c", fontSize:20, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Composición Detectada</h2>
+          {localComp.confidence === 'low' && (
+            <div style={{ marginTop:12, background:"rgba(255,215,0,0.1)", border:"1px solid rgba(255,215,0,0.2)", borderRadius:8, padding:"8px 12px", color:"#ffd700", fontSize:13, display:"flex", alignItems:"center", gap:8 }}>
+              <span>⚠️</span> Revisá los campeones, la detección puede no ser exacta.
+            </div>
+          )}
+        </div>
+        
+        <div style={{ overflowY:"auto", padding:"20px 28px", display:"flex", flexDirection:"column", gap:20 }}>
+          <section>
+            <div style={{ fontSize:11, fontWeight:800, color:"#d4a843", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Tu Campeón</div>
+            <div style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(200,155,60,0.05)", padding:12, borderRadius:12, border:"1px solid rgba(200,155,60,0.15)" }}>
+              <ChampPortrait name={localComp.userChampion.champion} size={40} />
+              <div style={{ flex:1, fontWeight:700, color:"#f0e6d2" }}>{localComp.userChampion.champion}</div>
+              <MiniLaneSelector value={localComp.userChampion.lane.toUpperCase()} onChange={(l) => updateProp('user', null, 'lane', l.toLowerCase())} />
+            </div>
+          </section>
+
+          <section>
+            <div style={{ fontSize:11, fontWeight:800, color:"#2dd66a", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Aliados</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {localComp.allies.map((a, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(29,186,90,0.05)", padding:"8px 12px", borderRadius:10 }}>
+                  <ChampPortrait name={a.champion} size={32} />
+                  <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{a.champion}</div>
+                  <MiniLaneSelector value={a.lane.toUpperCase()} onChange={(l) => updateProp('allies', i, 'lane', l.toLowerCase())} />
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section>
+            <div style={{ fontSize:11, fontWeight:800, color:"#ff4d63", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Enemigos</div>
+            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+              {localComp.enemies.map((e, i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(232,64,87,0.05)", padding:"8px 12px", borderRadius:10 }}>
+                  <ChampPortrait name={e.champion} size={32} />
+                  <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{e.champion}</div>
+                  <MiniLaneSelector value={e.lane.toUpperCase()} onChange={(l) => updateProp('enemies', i, 'lane', l.toLowerCase())} />
+                </div>
+              ))}
+            </div>
+          </section>
+        </div>
+
+        <div style={{ padding:"20px 28px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:12 }}>
+          <button onClick={onCancel} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.05)", border:"none", borderRadius:10, color:"#9a9590", fontWeight:700, cursor:"pointer" }}>Cancelar</button>
+          <button onClick={() => onConfirm(localComp)} style={{ flex:2, padding:"14px", background:"#c89b3c", border:"none", borderRadius:10, color:"#0a0a1a", fontWeight:800, textTransform:"uppercase", cursor:"pointer", boxShadow:"0 4px 16px rgba(200,155,60,0.2)" }}>Confirmar y Analizar</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 /* ─── Coach Tool ─── */
 function CoachTool({ user, ddragonVer }) {
   const [myChamp, setMyChamp] = useState(null);
@@ -624,6 +694,94 @@ function CoachTool({ user, ddragonVer }) {
   const [runeData, setRuneData] = useState({});
   const [fromCache, setFromCache] = useState(false);
   const [buildType, setBuildType] = useState("auto");
+
+  // Screenshot States
+  const [screenshotModal, setScreenshotModal] = useState(false);
+  const [screenshotLoading, setScreenshotLoading] = useState(false);
+  const [screenshotError, setScreenshotError] = useState("");
+  const [detectedComposition, setDetectedComposition] = useState(null);
+  const fileInputRef = useRef(null);
+
+  const handleScreenshotUpload = async (file) => {
+    if (!file) return;
+    
+    // Validar tamaño en cliente (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      setScreenshotError("La imagen supera el límite de 5MB");
+      return;
+    }
+
+    setScreenshotLoading(true);
+    setScreenshotError("");
+
+    const reader = new FileReader();
+    reader.onload = async (e) => {
+      const base64 = e.target.result.split(",")[1];
+      const mediaType = file.type;
+
+      try {
+        const res = await fetch("/api/vision", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ image: base64, mediaType }),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+          setScreenshotError(data.error || "Error al analizar la imagen");
+          setScreenshotLoading(false);
+          return;
+        }
+
+        setDetectedComposition(data);
+        setScreenshotModal(true);
+      } catch (err) {
+        setScreenshotError("Error de conexión al analizar la imagen");
+      } finally {
+        setScreenshotLoading(false);
+      }
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const confirmDetectedComposition = (comp) => {
+    // 1. My Champ & Lane
+    setMyChamp(comp.userChampion.champion);
+    setMyLane(comp.userChampion.lane.toUpperCase());
+
+    // 2. Allies
+    const newAllies = [null,null,null,null];
+    const newAllyLanes = [null,null,null,null];
+    comp.allies.slice(0, 4).forEach((a, i) => {
+      newAllies[i] = a.champion;
+      newAllyLanes[i] = a.lane.toUpperCase();
+    });
+    setAllies(newAllies);
+    setAllyLanes(newAllyLanes);
+
+    // 3. Enemies
+    // Opponent is the enemy in the same lane as user
+    const userLane = comp.userChampion.lane.toLowerCase();
+    const opponentIndex = comp.enemies.findIndex(e => e.lane.toLowerCase() === userLane);
+    const opponent = opponentIndex !== -1 ? comp.enemies[opponentIndex] : comp.enemies[0];
+    const otherEnemies = comp.enemies.filter((_, idx) => idx !== opponentIndex);
+
+    setLaneOpponent(opponent.champion);
+    
+    const newEnemies = [null,null,null,null];
+    const newEnemyLanes = [null,null,null,null];
+    otherEnemies.slice(0, 4).forEach((e, i) => {
+      newEnemies[i] = e.champion;
+      newEnemyLanes[i] = e.lane.toUpperCase();
+    });
+    setEnemies(newEnemies);
+    setEnemyLanes(newEnemyLanes);
+
+    setScreenshotModal(false);
+    // Give it a tick to update state before generating
+    setTimeout(() => generate(), 100);
+  };
 
   useEffect(() => {
     // Data update when version changes or on mount
@@ -860,7 +1018,15 @@ function CoachTool({ user, ddragonVer }) {
     <div style={{ maxWidth:900, margin:"0 auto" }}>
       {/* My Champ */}
       <div style={{ background:"rgba(200,155,60,0.05)", border:"1px solid rgba(200,155,60,0.25)", borderRadius:12, padding:20, marginBottom:14 }}>
-        <div style={{ fontSize:13, textTransform:"uppercase", letterSpacing:"2px", color:"#d4a843", marginBottom:12, fontWeight:700 }}>🎮 Tu campeón</div>
+        <div style={{ fontSize:13, textTransform:"uppercase", letterSpacing:"2px", color:"#d4a843", marginBottom:12, fontWeight:700, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
+          <span>🎮 Tu campeón</span>
+          <button onClick={() => fileInputRef.current?.click()} style={{ background:"transparent", border:"1px solid rgba(200,155,60,0.3)", color:"#c89b3c", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"0.2s" }} onMouseEnter={(e) => e.currentTarget.style.background="rgba(200,155,60,0.1)"} onMouseLeave={(e) => e.currentTarget.style.background="transparent"}>
+            📷 Subir captura
+          </button>
+          <input type="file" ref={fileInputRef} onChange={(e) => handleScreenshotUpload(e.target.files[0])} accept="image/*" style={{ display:"none" }} />
+        </div>
+        {screenshotLoading && <div style={{ fontSize:12, color:"#c89b3c", marginBottom:10, animation:"pulse 1.5s infinite" }}>✨ Analizando imagen...</div>}
+        {screenshotError && <div style={{ fontSize:12, color:"#ff4d63", marginBottom:10 }}>{screenshotError}</div>}
         <div className="champ-lane-row" style={{ display:"flex", gap:10 }}>
           <div style={{ flex:1 }}>
             <ChampionPicker value={myChamp} onChange={setMyChamp} champions={availableFor(myChamp)} placeholder="Seleccioná tu campeón" />
@@ -1102,6 +1268,9 @@ function CoachTool({ user, ddragonVer }) {
         </div>
       </ErrorBoundary>
     )}
+
+    {screenshotModal && <ScreenshotConfirmModal composition={detectedComposition} onCancel={() => setScreenshotModal(false)} onConfirm={confirmDetectedComposition} />}
+
     </div>
   );
 }
