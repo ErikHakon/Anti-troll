@@ -32,43 +32,25 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a League of Legends loading screen screenshot.
-The user's champion is identified by their summoner name appearing in yellow/golden color.
-In the loading screen, each team's 5 champions are displayed horizontally left to right 
-in this exact lane order: top, jungle, mid, adc, support.
+  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a loading screen screenshot.
+List the champions exactly as they appear visually, left to right.
+The user's champion has their summoner name in YELLOW or GOLDEN color.
 Respond ONLY with valid JSON, no markdown, no explanation.`;
 
   const USER_PROMPT = `Analyze this League of Legends loading screen screenshot.
-Identify all 10 champions and their lanes.
 
-Lane assignment rule: within each team row, champions appear left to right as:
-1st = top, 2nd = jungle, 3rd = mid, 4th = adc, 5th = support.
-CRITICAL: assign lanes by counting card positions only.
-Do NOT use your knowledge of what role a champion typically plays.
-A champion in position 2 is ALWAYS jungle, even if they are known as a top laner.
+There are 2 rows of 5 champion cards:
+- Top row = blue team (left to right: positions 1, 2, 3, 4, 5)
+- Bottom row = red team (left to right: positions 1, 2, 3, 4, 5)
 
-User identification rule: find the summoner name in yellow/gold color — 
-the champion in that card is the userChampion.
+List all champions in visual left-to-right order.
+Find the summoner name in yellow/gold color — mark that champion as the user.
 
-Respond with this exact JSON structure:
+Respond with this exact JSON:
 {
-  "userChampion": {
-    "champion": "ChampionName",
-    "lane": "top|jungle|mid|adc|support"
-  },
-  "allies": [
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" }
-  ],
-  "enemies": [
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" },
-    { "champion": "ChampionName", "lane": "top|jungle|mid|adc|support" }
-  ],
+  "blueTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
+  "redTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
+  "userChampion": "ChampionName",
   "confidence": "high|medium|low"
 }`;
 

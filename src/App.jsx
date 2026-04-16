@@ -662,18 +662,20 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
                     onClick={() => swapWithUser(i)}
                     title="Este es mi campeón"
                     style={{
-                      background: "transparent",
-                      border: "1px solid rgba(200,155,60,0.3)",
+                      background: "rgba(200,155,60,0.08)",
+                      border: "1px solid rgba(200,155,60,0.25)",
                       color: "#c89b3c",
-                      borderRadius: 6,
-                      padding: "4px 8px",
-                      fontSize: 11,
+                      borderRadius: 20,
+                      padding: "3px 10px",
+                      fontSize: 10,
+                      fontWeight: 700,
                       cursor: "pointer",
                       whiteSpace: "nowrap",
                       flexShrink: 0,
+                      letterSpacing: "0.5px",
                     }}
                   >
-                    ↑ Soy yo
+                    soy yo
                   </button>
                 </div>
               ))}
@@ -762,7 +764,33 @@ function CoachTool({ user, ddragonVer }) {
           return;
         }
 
-        setDetectedComposition(data);
+        const L = ["TOP", "JGL", "MID", "ADC", "SUP"];
+        const userIndex = data.blueTeam.indexOf(data.userChampion);
+        const userLane = userIndex !== -1 ? L[userIndex] : L[2]; // Default MID si no se encuentra
+
+        // Obtener aliados (los otros 4 del blueTeam)
+        const blueWithoutUser = userIndex !== -1
+          ? data.blueTeam.filter((_, i) => i !== userIndex)
+          : data.blueTeam.slice(0, 4);
+
+        const allies = blueWithoutUser.map((champion) => {
+          const originalIndex = data.blueTeam.indexOf(champion);
+          return { champion, lane: L[originalIndex] };
+        });
+
+        const enemies = data.redTeam.map((champion, i) => ({
+          champion,
+          lane: L[i],
+        }));
+
+        const transformed = {
+          userChampion: { champion: data.userChampion, lane: userLane },
+          allies,
+          enemies,
+          confidence: data.confidence,
+        };
+
+        setDetectedComposition(transformed);
         setScreenshotModal(true);
       } catch (err) {
         setScreenshotError("Error de conexión al analizar la imagen");
