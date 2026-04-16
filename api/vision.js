@@ -63,14 +63,7 @@ If a label uses a word you don't recognize, infer the role from context
 (position in the list, champion identity, etc.) and return the closest of
 the 5 canonical values. Never return the original label text.
 
-For BOTH types: the user's champion is identified by their SUMMONER NAME (not skin name) highlighted in YELLOW or GOLDEN color.
-In a LOADING SCREEN card, text is laid out TOP to BOTTOM as:
-1. Skin name (top, smaller text)
-2. Champion name (middle, bold, large white text)
-3. Summoner name (bottom, colored)
-The yellow/gold color appears on the BOTTOM text of one specific card — that bottom text is the user's summoner name. Identify the champion on that same card (the middle bold text). That is the userChampion.
-
-In a CHAMPION SELECT screen, the summoner name appears below each ally champion name on the left side. Find the one in yellow/gold and the champion directly above it is the userChampion.
+For BOTH types: find the text written in YELLOW or GOLDEN color — that is the user's summoner name. The champion on that same card is the userChampion.
 
 If TYPE A (loading):
 - blueTeam = 5 champion names from top row, left to right
