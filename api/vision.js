@@ -32,34 +32,36 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a screenshot.
-In a League of Legends LOADING SCREEN, champions are ALWAYS displayed in this 
-exact vertical order, top to bottom:
-  Position 1 = TOP
-  Position 2 = JUNGLE
-  Position 3 = MID
-  Position 4 = ADC (bot carry)
-  Position 5 = SUPPORT
+  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a loading screen screenshot.
+You have TWO separate tasks. Complete them independently:
 
-Use this positional order as the PRIMARY method to assign lanes.
-Only override it if the champion is universally known to never play that role
-(e.g. Soraka at position 2 → still JUNGLE by position, don't override).
-The user's champion is identified by their summoner name in yellow/golden color.
+TASK 1 — IDENTIFY THE USER'S CHAMPION:
+Look for the summoner name written in YELLOW or GOLDEN color on the left side (blue team).
+The champion portrait directly next to that yellow/gold name is the user's champion.
+This is purely a color recognition task — do not use position for this.
+
+TASK 2 — ASSIGN LANES BY VERTICAL POSITION:
+In a League of Legends loading screen, champions on each team are always 
+listed vertically top to bottom in this exact order:
+  1st (topmost) = top
+  2nd = jungle
+  3rd = mid
+  4th = adc
+  5th (bottommost) = support
+Apply this positional rule to ALL 10 champions (both teams).
+
 Respond ONLY with valid JSON, no markdown, no explanation.`;
 
-  const USER_PROMPT = `Analyze this League of Legends loading screen screenshot.
-Both teams show 5 champions each, listed vertically top to bottom.
-Assign lanes strictly by vertical position:
-  1st champion (topmost) = top
-  2nd champion = jungle
-  3rd champion = mid
-  4th champion = adc
-  5th champion (bottommost) = support
+  const USER_PROMPT = `Analyze this League of Legends loading screen.
 
-Identify which champion has the summoner name highlighted in yellow/gold — 
-that is the user's champion.
+Step 1: Find the summoner name in YELLOW/GOLD on the left (blue) team. 
+The champion next to that name is "userChampion". Assign their lane by position.
 
-Respond with this exact JSON structure:
+Step 2: List the other 4 blue team champions as "allies", lanes by position.
+
+Step 3: List all 5 red team champions as "enemies", lanes by position.
+
+Respond with this exact JSON:
 {
   "userChampion": {
     "champion": "ChampionName",
