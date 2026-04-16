@@ -43,12 +43,21 @@ TYPE A — "loading": two HORIZONTAL rows of 5 large champion cards. Top row = b
 
 TYPE B — "champion_select": an equip/prepare screen. A VERTICAL list of 5 allied champions on the LEFT with LANE LABELS above each champion name. Labels can be in Spanish (SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) or English (TOP, JUNGLE, MID, ADC, SUPPORT). Enemy champions appear on the RIGHT side as a vertical list WITHOUT lane labels.
 
-Lane label mapping (Spanish → English):
-- SUPERIOR → "top"
-- JUNGLA → "jgl"
-- CENTRAL → "mid"
-- INFERIOR → "adc"
-- SOPORTE → "sup"
+CRITICAL lane value rules:
+blueLanes MUST contain ONLY these 5 exact string values: "top", "jgl", "mid", "adc", "sup".
+Translate whatever label you see to one of these 5 values. Use your knowledge of
+League of Legends role terminology in any language.
+Examples of translation (not exhaustive — apply the same logic for any variant):
+
+"SUPERIOR" / "TOP" / "OBEN" / "HAUT" → "top"
+"JUNGLA" / "JUNGLE" / "SELVA" / "BOSQUE" / "DSCHUNGEL" → "jgl"
+"CENTRAL" / "MID" / "MIDDLE" / "MEDIO" → "mid"
+"INFERIOR" / "ADC" / "BOT" / "BOTTOM" / "TIRADOR" / "ATIRADOR" → "adc"
+"SOPORTE" / "SUPPORT" / "SOUTIEN" / "APOIO" → "sup"
+
+If a label uses a word you don't recognize, infer the role from context
+(position in the list, champion identity, etc.) and return the closest of
+the 5 canonical values. Never return the original label text.
 
 If TYPE A (loading):
 - blueTeam = 5 champion names from top row, left to right
