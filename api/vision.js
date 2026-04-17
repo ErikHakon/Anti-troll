@@ -38,8 +38,15 @@ The user's champion is identified by their summoner name appearing in yellow/gol
 Champion names MUST be returned in Title Case (e.g. "Shaco", "Vel'Koz", "Miss Fortune"), never ALL CAPS.
 Respond ONLY with valid JSON, no markdown, no explanation.`;
 
-  const USER_PROMPT = `Analyze this League of Legends screenshot (loading screen or champion select).
+  const USER_PROMPT = `Analyze this League of Legends screenshot.
 
+TASK 1 — USER IDENTIFICATION (do this FIRST, independently):
+Scan the image for a summoner name written in YELLOW or GOLDEN color 
+(different from the white/gray of other summoner names).
+Identify the champion associated with that golden name.
+Return just the champion name. This is independent of team listings.
+
+TASK 2 — TEAM EXTRACTION (separate task):
 Identify which type of screen this is:
 - "loading": two horizontal rows of 5 champion cards
 - "champion_select": vertical list of 5 allies on the left with lane labels, enemies on the right
@@ -47,16 +54,17 @@ Identify which type of screen this is:
 Extract:
 - blueTeam: 5 blue team champion names (top row in loading, left column in champion select)
 - redTeam: 5 red team champion names (bottom row in loading, right column in champion select)
-- userChampion: the champion whose summoner name appears in YELLOW or GOLD color
-- blueLanes: only for champion_select, the 5 ally lanes in order ("top", "jgl", "mid", "adc", "sup"). For loading screen, set to null.
+- blueLanes: only for champion_select, the 5 ally lanes in order. Values must be: "top", "jgl", "mid", "adc", "sup".
+  Translate labels from any language: SUPERIOR/TOP→top, JUNGLA/JUNGLE→jgl, CENTRAL/MID→mid, INFERIOR/ADC/BOT→adc, SOPORTE/SUPPORT→sup.
+  For loading screen, set to null.
 
 Respond with this exact JSON structure:
 {
+  "userChampion": "ChampionName",
   "screenType": "loading" | "champion_select",
   "blueTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "redTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "blueLanes": ["top", "jgl", "mid", "adc", "sup"] or null,
-  "userChampion": "ChampionName",
   "confidence": "high|medium|low"
 }`;
 
