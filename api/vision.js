@@ -32,60 +32,31 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You are analyzing a League of Legends screenshot.
-Read the text visible on screen. Do not guess or infer — only report what you see.
+  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a screenshot.
+Extract the 10 champions visible (5 per team).
+The user's champion is identified by their summoner name appearing in yellow/golden color.
 Champion names MUST be returned in Title Case (e.g. "Shaco", "Vel'Koz", "Miss Fortune"), never ALL CAPS.
 Respond ONLY with valid JSON, no markdown, no explanation.`;
 
-  const USER_PROMPT = `Identify which type of League of Legends screen this is:
+  const USER_PROMPT = `Analyze this League of Legends screenshot (loading screen or champion select).
 
-TYPE A — "loading": two HORIZONTAL rows of 5 large champion cards. Top row = blue team, bottom row = red team. No lane labels.
+Identify which type of screen this is:
+- "loading": two horizontal rows of 5 champion cards
+- "champion_select": vertical list of 5 allies on the left with lane labels, enemies on the right
 
-TYPE B — "champion_select": an equip/prepare screen. A VERTICAL list of 5 allied champions on the LEFT with LANE LABELS above each champion name. Labels can be in Spanish (SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) or English (TOP, JUNGLE, MID, ADC, SUPPORT). Enemy champions appear on the RIGHT side as a vertical list WITHOUT lane labels.
+Extract:
+- blueTeam: 5 blue team champion names (top row in loading, left column in champion select)
+- redTeam: 5 red team champion names (bottom row in loading, right column in champion select)
+- userChampion: the champion whose summoner name appears in YELLOW or GOLD color
+- blueLanes: only for champion_select, the 5 ally lanes in order ("top", "jgl", "mid", "adc", "sup"). For loading screen, set to null.
 
-CRITICAL lane value rules:
-blueLanes MUST be an array of EXACTLY 5 strings, one per ally champion, in the same order as blueTeam.
-Each value MUST be one of: "top", "jgl", "mid", "adc", "sup".
-All 5 lane values MUST appear exactly once in blueLanes (never repeat, never omit).
-If you can't read one label clearly, infer the missing lane by elimination
-(the 5 roles always appear once each in a standard game).
-Translate whatever label you see to one of these 5 values. Use your knowledge of
-League of Legends role terminology in any language.
-Examples of translation (not exhaustive — apply the same logic for any variant):
-
-"SUPERIOR" / "TOP" / "OBEN" / "HAUT" → "top"
-"JUNGLA" / "JUNGLE" / "SELVA" / "BOSQUE" / "DSCHUNGEL" → "jgl"
-"CENTRAL" / "MID" / "MIDDLE" / "MEDIO" → "mid"
-"INFERIOR" / "ADC" / "BOT" / "BOTTOM" / "TIRADOR" / "ATIRADOR" → "adc"
-"SOPORTE" / "SUPPORT" / "SOUTIEN" / "APOIO" → "sup"
-
-If a label uses a word you don't recognize, infer the role from context
-(position in the list, champion identity, etc.) and return the closest of
-the 5 canonical values. Never return the original label text.
-
-For BOTH types: identify the user's champion.
-Look at the 5 summoner names on the blue team. Exactly one has a YELLOW/GOLDEN color
-while the others are WHITE. Return the INDEX (0, 1, 2, 3, or 4) of that champion
-in the blueTeam array.
-userIndex = 0 means the first champion in blueTeam, userIndex = 4 means the last.
-
-If TYPE A (loading):
-- blueTeam = 5 champion names from top row, left to right
-- redTeam = 5 champion names from bottom row, left to right
-- blueLanes = null
-
-If TYPE B (champion_select):
-- blueTeam = 5 ally champion names (left column, top to bottom)
-- blueLanes = 5 lane values for blueTeam in the same order, read from labels
-- redTeam = 5 enemy champion names (right column, top to bottom)
-
-Respond with:
+Respond with this exact JSON structure:
 {
   "screenType": "loading" | "champion_select",
   "blueTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "redTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "blueLanes": ["top", "jgl", "mid", "adc", "sup"] or null,
-  "userIndex": 0,
+  "userChampion": "ChampionName",
   "confidence": "high|medium|low"
 }`;
 
