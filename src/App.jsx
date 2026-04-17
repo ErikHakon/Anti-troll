@@ -813,7 +813,6 @@ function CoachTool({ user, ddragonVer }) {
 
         const blueTeam = (data.blueTeam || []).map(toTitleCase);
         const redTeam = (data.redTeam || []).map(toTitleCase);
-        const userChampion = toTitleCase(data.userChampion);
 
         const POSITIONAL_LANES = ["top", "jgl", "mid", "adc", "sup"];
         const isChampSelect = data.screenType === "champion_select";
@@ -826,8 +825,9 @@ function CoachTool({ user, ddragonVer }) {
           ? [null, null, null, null, null]
           : POSITIONAL_LANES;
 
-        let userIndex = blueTeam.indexOf(userChampion);
-        if (userIndex === -1) userIndex = 0;
+        let userIndex = typeof data.userIndex === "number" ? data.userIndex : 0;
+        if (userIndex < 0 || userIndex > 4) userIndex = 0;
+        const userChampion = blueTeam[userIndex];
 
         const userLane = blueLanes[userIndex] || null;
 

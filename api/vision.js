@@ -63,13 +63,11 @@ If a label uses a word you don't recognize, infer the role from context
 (position in the list, champion identity, etc.) and return the closest of
 the 5 canonical values. Never return the original label text.
 
-For BOTH types: identify the user's champion using this explicit procedure:
-Step 1: Scan all summoner name texts in the image. In a loading screen, these appear BELOW each champion's name. In champion select, they appear below each ally on the left.
-Step 2: Compare the colors. 4 out of 5 blue team summoner names are in WHITE or LIGHT GRAY. Exactly 1 has a different color: YELLOW, GOLDEN, ORANGE, or AMBER (a warm tint clearly distinct from white).
-Step 3: That 1 differently-colored name is the user's summoner name. The champion whose card contains that colored name is the userChampion.
-IMPORTANT: Do NOT default to the first or last champion in blueTeam. The user
-can be ANY of the 5. Take time to visually compare each summoner name's color
-before deciding.
+For BOTH types: identify the user's champion.
+Look at the 5 summoner names on the blue team. Exactly one has a YELLOW/GOLDEN color
+while the others are WHITE. Return the INDEX (0, 1, 2, 3, or 4) of that champion
+in the blueTeam array.
+userIndex = 0 means the first champion in blueTeam, userIndex = 4 means the last.
 
 If TYPE A (loading):
 - blueTeam = 5 champion names from top row, left to right
@@ -81,15 +79,13 @@ If TYPE B (champion_select):
 - blueLanes = 5 lane values for blueTeam in the same order, read from labels
 - redTeam = 5 enemy champion names (right column, top to bottom)
 
-For BOTH types: find the summoner name in YELLOW/GOLD — that champion is userChampion.
-
 Respond with:
 {
   "screenType": "loading" | "champion_select",
   "blueTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "redTeam": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
   "blueLanes": ["top", "jgl", "mid", "adc", "sup"] or null,
-  "userChampion": "ChampionName",
+  "userIndex": 0,
   "confidence": "high|medium|low"
 }`;
 
