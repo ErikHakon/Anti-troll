@@ -32,33 +32,20 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing a screenshot.
-Extract the 10 champions visible (5 per team).
-The user's champion is identified by their summoner name appearing in yellow/golden color.
-Champion names MUST be returned in Title Case (e.g. "Shaco", "Vel'Koz", "Miss Fortune"), never ALL CAPS.
-Respond ONLY with valid JSON, no markdown, no explanation.`;
+  const SYSTEM_PROMPT = `You analyze League of Legends screenshots. 
+Respond with valid JSON only. No markdown, no explanation.`;
 
-  const USER_PROMPT = `Analyze this League of Legends screenshot.
+  const USER_PROMPT = `Identify the 10 champions in this League of Legends screenshot and the user's champion.
 
-TASK 1 — USER IDENTIFICATION (do this FIRST, independently):
-Scan the image for a summoner name written in YELLOW or GOLDEN color 
-(different from the white/gray of other summoner names).
-Identify the champion associated with that golden name.
-Return just the champion name. This is independent of team listings.
+The user's summoner name appears in golden/yellow text. All other summoner names are white or gray. Find the golden text and identify which champion card it belongs to — that is the user's champion.
 
-TASK 2 — TEAM EXTRACTION (separate task):
-Identify which type of screen this is:
-- "loading": two horizontal rows of 5 champion cards
-- "champion_select": vertical list of 5 allies on the left with lane labels, enemies on the right
+Screen types:
+- "loading": two horizontal rows of 5 champion cards. blueTeam = top row, redTeam = bottom row. blueLanes = null.
+- "champion_select": vertical list with 5 allies (left, with lane labels) and 5 enemies (right). blueTeam = allies, redTeam = enemies. Read blueLanes from the labels: SUPERIOR/TOP→top, JUNGLA/JUNGLE→jgl, CENTRAL/MID→mid, INFERIOR/ADC/BOT→adc, SOPORTE/SUPPORT→sup.
 
-Extract:
-- blueTeam: 5 blue team champion names (top row in loading, left column in champion select)
-- redTeam: 5 red team champion names (bottom row in loading, right column in champion select)
-- blueLanes: only for champion_select, the 5 ally lanes in order. Values must be: "top", "jgl", "mid", "adc", "sup".
-  Translate labels from any language: SUPERIOR/TOP→top, JUNGLA/JUNGLE→jgl, CENTRAL/MID→mid, INFERIOR/ADC/BOT→adc, SOPORTE/SUPPORT→sup.
-  For loading screen, set to null.
+Champion names must be in Title Case: "Shaco", "Vel'Koz", "Miss Fortune". Never ALL CAPS.
 
-Respond with this exact JSON structure:
+Respond with this JSON:
 {
   "userChampion": "ChampionName",
   "screenType": "loading" | "champion_select",
