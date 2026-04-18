@@ -37,7 +37,7 @@ Respond with valid JSON only. No markdown, no explanation.`;
 
   const USER_PROMPT = `Analyze this League of Legends loading screen or champion select screenshot.
 
-Identify all 10 champions. Mark which champion belongs to the user (the one with the yellow/gold summoner name — every other summoner name is white or gray).
+Identify all 10 champions and assign each one a lane role. Mark which champion belongs to the user (yellow/gold username).
 
 Identify the screen type:
 - "loading": two horizontal rows of 5 champion cards
