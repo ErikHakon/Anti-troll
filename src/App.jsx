@@ -961,7 +961,7 @@ function CoachTool({ user, ddragonVer }) {
           transformed = {
             mode: "confirm-composition",
             userChampion: normalizeSlot(data.userChampion),
-            allies: (data.allies || []).map(normalizeSlot),
+            allies: (data.allies || []).map(normalizeSlot).filter(a => a.champion !== normalizeSlot(data.userChampion).champion),
             enemies: (data.enemies || []).map(normalizeSlot),
             confidence: data.confidence,
             screenType: data.screenType,
