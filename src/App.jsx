@@ -861,7 +861,6 @@ function CoachTool({ user, ddragonVer }) {
   const [loadingMsg, setLoadingMsg] = useState(0);
   const [itemData, setItemData] = useState({});
   const [runeData, setRuneData] = useState({});
-  const [skinIndex, setSkinIndex] = useState({});
   const [fromCache, setFromCache] = useState(false);
   const [buildType, setBuildType] = useState("auto");
 
@@ -932,27 +931,8 @@ function CoachTool({ user, ddragonVer }) {
           return map[l] || null;
         };
 
-        // Resolver texto de card → nombre base del champion usando el índice de skins de DDragon.
-        // Haiku transcribe el texto de la card tal cual (puede ser nombre de skin o nombre base).
-        // skinIndex (preconstruido del champion.json de DDragon) mapea 
-        // skinName.toLowerCase() → championBaseName en español.
-        // Si no matchea en el índice, asumimos que ya es el nombre base y aplicamos toTitleCase.
-        const resolveChampion = (cardText) => {
-          if (!cardText) return cardText;
-          const key = cardText.toLowerCase().trim();
-          // Lookup exacto
-          if (skinIndex[key]) return skinIndex[key];
-          // Lookup parcial: buscar si alguna key del índice está contenida en el texto de la card
-          // (cubre casos como "PROYECTO: Renekton" donde "renekton" está en el texto)
-          for (const [skinKey, champName] of Object.entries(skinIndex)) {
-            if (skinKey !== "default" && key.includes(skinKey)) return champName;
-          }
-          // Fallback: asumir que el texto ya es el nombre base
-          return toTitleCase(cardText);
-        };
-
         const normalizeSlot = (slot) => ({
-          champion: resolveChampion(slot?.champion),
+          champion: toTitleCase(slot?.champion),
           lane: normalizeLane(slot?.lane),
         });
 
@@ -963,11 +943,11 @@ function CoachTool({ user, ddragonVer }) {
 
         if (data.screenType === "loading") {
           const topRow = (data.topRow || []).map((cardText, i) => ({
-            champion: resolveChampion(cardText),
+            champion: toTitleCase(cardText),
             lane: POSITIONAL_LANES[i] || null,
           }));
           const bottomRow = (data.bottomRow || []).map((cardText, i) => ({
-            champion: resolveChampion(cardText),
+            champion: toTitleCase(cardText),
             lane: POSITIONAL_LANES[i] || null,
           }));
           transformed = {
@@ -1095,25 +1075,6 @@ function CoachTool({ user, ddragonVer }) {
         setRuneData({ exact, normalized });
       }).catch(() => {});
 
-      // Índice de skins: skinName.toLowerCase() → championBaseName
-      // Usa es_ES para que matchee los nombres que aparecen en las cards
-      fetch(ddragonUrl("data/es_ES/champion.json", actualVer))
-        .then(r => r.json())
-        .then(champData => {
-          const index = {};
-          for (const [champKey, champ] of Object.entries(champData.data)) {
-            const baseName = champ.name; // nombre base del champion en español
-            for (const skin of champ.skins) {
-              if (skin.num === 0) continue; // "default" → no es nombre de skin
-              // Indexar el nombre de skin en lowercase para lookup case-insensitive
-              index[skin.name.toLowerCase()] = baseName;
-              // También indexar el nombre base del champion (para cards sin skin)
-            }
-            // El nombre base también debe resolverse a sí mismo
-            index[baseName.toLowerCase()] = baseName;
-          }
-          setSkinIndex(index);
-        }).catch(() => {});
   }, [ddragonVer]);
   
   const handleLaneChange = (l) => {

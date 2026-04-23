@@ -32,7 +32,7 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You read text from League of Legends screenshots. You do NOT identify champions by their visual appearance. You only transcribe text that is written on the screen.
+  const SYSTEM_PROMPT = `You are a League of Legends expert analyzing screenshots. You identify the 10 champions in a match using the text written on each champion card as your primary clue, combined with your knowledge of LoL skins.
 
 Respond ONLY with valid JSON. No markdown fences, no explanation, no commentary.`;
 
@@ -42,29 +42,51 @@ Respond ONLY with valid JSON. No markdown fences, no explanation, no commentary.
 - "loading": two horizontal rows of 5 champion cards each.
 - "champion_select": vertical list of 5 champions on the LEFT (user's allies, each with a Spanish lane label: SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) and 5 on the RIGHT (enemies).
 
-── FOR LOADING SCREEN: READ THE CARD TEXT ──
+── FOR LOADING SCREEN: IDENTIFY CHAMPIONS FROM CARD TEXT ──
 
-Each card has a full-body splash art. Inside the splash art, directly ABOVE the small circular summoner icon, there is a piece of text. This is either the base champion name OR the skin name (e.g. "El Shascanueces", "Nocturne Eternum", "Shen Amarillo", "PROYECTO: Renekton").
+Each card has a full-body splash art. Inside the splash art, directly ABOVE the small circular summoner icon, there is ONE piece of text. This text is the champion name or the skin name.
 
-Read ONLY that text. Transcribe it exactly as written. Do NOT interpret, translate, or replace it with anything else. Do NOT look at the splash art visuals.
+Read that text first. Then use it — combined with your knowledge of LoL — to identify the BASE champion name. Always return the BASE champion name, never the skin name.
 
-IGNORE all text that appears BELOW the summoner icon. That text is the player's summoner name or a decorative title (e.g. "Cazador de Caits", "Incendiario", "Ángel Guardián"). It is NOT the champion or skin name.
+The text is in Spanish. Most skins contain the champion name as a substring:
+- "Mordekaiser Pentakill" → Mordekaiser
+- "Nocturne Eternum" → Nocturne  
+- "Shen Amarillo" → Shen
+- "Miss Fortune Gatillera Galáctica" → Miss Fortune
+- "Jarvan IV Forja Oscura" → Jarvan IV
+- "PROYECTO: Renekton" → Renekton
+- "Malphite Estrella Oscura" → Malphite
+- "Shaco Arcanista" → Shaco
 
-Read all 10 cards left to right, top row first then bottom row. Return the text you read for each card exactly as it appears.
+Some skins have names that do NOT contain the champion name — you must know these:
+- "El Shascanueces" → Shaco
+- "Urfwick" → Warwick
+- "Beemo" → Teemo
+- "Yuumiel" → Yuumi
+- "Sir Kled" → Kled
+- "DJ Sona" → Sona
 
-── FOR CHAMPION SELECT: READ CHAMPION NAMES AND LANES ──
+IGNORE all text BELOW the summoner icon — that is the player's summoner name or a decorative title ("Cazador de Caits", "Incendiario", "Ángel Guardián", "Diferencia de Carril Superior", etc.). It is NOT the champion.
+
+Do NOT identify champions by the visual appearance of the splash art. Epic skins (Estrella Oscura, PROYECTO, Pentakill, Prestigioso, etc.) transform the champion's appearance completely — a champion may look nothing like their base form. The text is always more reliable than the visual.
+
+── FOR CHAMPION SELECT ──
 
 Read the champion name written next to each portrait. Identify the user by the golden/yellow summoner name on the ally list.
 Map Spanish lane labels: SUPERIOR → "top", JUNGLA → "jgl", CENTRAL → "mid", INFERIOR → "adc", SOPORTE → "sup".
 
-── CHAMPION NAME FORMAT (champion_select only) ──
-Return names in Title Case: "Shaco", "Miss Fortune", "Jarvan IV", "Kai'Sa", "Cho'Gath", "Vel'Koz", "Lee Sin", "Tahm Kench", "Twisted Fate", "Dr. Mundo", "Aurelion Sol", "LeBlanc", "Nunu & Willump", "Bel'Veth", "K'Sante", "Kog'Maw", "Rek'Sai", "Kha'Zix", "Xin Zhao", "Master Yi", "Renata Glasc", "Wukong".
+── CHAMPION NAME FORMAT ──
+Return the BASE champion name in Title Case with correct punctuation:
+"Shaco", "Miss Fortune", "Jarvan IV", "Kai'Sa", "Cho'Gath", "Vel'Koz", 
+"Lee Sin", "Tahm Kench", "Twisted Fate", "Dr. Mundo", "Aurelion Sol", 
+"LeBlanc", "Nunu & Willump", "Bel'Veth", "K'Sante", "Kog'Maw", 
+"Rek'Sai", "Kha'Zix", "Xin Zhao", "Master Yi", "Renata Glasc", "Wukong".
 
 ── JSON FORMAT FOR "loading" ──
 {
   "screenType": "loading",
-  "topRow": ["text from card 1", "text from card 2", "text from card 3", "text from card 4", "text from card 5"],
-  "bottomRow": ["text from card 1", "text from card 2", "text from card 3", "text from card 4", "text from card 5"],
+  "topRow": ["ChampionName", "ChampionName", "ChampionName", "ChampionName", "ChampionName"],
+  "bottomRow": ["ChampionName", "ChampionName", "ChampionName", "ChampionName", "ChampionName"],
   "confidence": "high" | "medium" | "low"
 }
 
