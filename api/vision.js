@@ -32,48 +32,42 @@ export default async function handler(req, res) {
   }
 
   // 4. Prompts de Visión
-  const SYSTEM_PROMPT = `You analyze League of Legends screenshots (loading screens and champion select screens). You identify champions, their lanes, and which champion belongs to the user.
+  const SYSTEM_PROMPT = `You analyze League of Legends screenshots. You identify champions by their portraits. You return a strict JSON structure based on the screen type.
 
 Respond ONLY with valid JSON. No markdown fences, no explanation, no commentary.`;
 
-  const USER_PROMPT = `Analyze this League of Legends screenshot. It can be either a LOADING SCREEN or a CHAMPION SELECT screen.
+  const USER_PROMPT = `Analyze this League of Legends screenshot. It is either a LOADING SCREEN or a CHAMPION SELECT screen.
 
-── FINDING THE USER ──
-Somewhere in the screenshot there is exactly ONE piece of text rendered in a golden/yellow color. Every other text is white or gray. That single golden text is the user's summoner name, and it is placed near the user's champion. The champion associated with that golden text is the user's champion.
+── STEP 1: IDENTIFY SCREEN TYPE ──
+- "loading": two horizontal rows of 5 champion cards each. Each card shows a full-body champion splash art, and below it some text labels (summoner name and/or champion name).
+- "champion_select": vertical list of 5 champions on the LEFT side (the user's allies, each with a Spanish lane label: SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) and 5 champions on the RIGHT side (the enemy team).
 
-Before writing the JSON, describe in a field called "debugGoldenText" what golden/yellow text you see and where it is located. Be precise about its position (e.g. "top row, 3rd card from the left" or "bottom row, rightmost card"). If you are not sure, say so.
+── STEP 2: IDENTIFY CHAMPIONS ──
+Identify all 10 champions by their portraits. Return the BASE champion name, NEVER the skin name. Examples: "Mordekaiser" (not "Mordekaiser Pentakill"); "Shaco" (not "Shaco Arcanista"); "Kled" (not "Sir Kled"); "Warwick" (not "Urfwick"); "Teemo" (not "Beemo"); "Yuumi" (not "Yuumiel"); "Lee Sin" (not "Lee Sin Muay Thai"); "Sett" (not "Sett Dragón de Obsidiana").
 
-── SCREEN TYPE ──
-- "loading": two horizontal rows of 5 champion cards each. Below each card there is a text label. Exactly one label is golden/yellow — that label identifies the user. The user's team may be the top row or the bottom row (it depends on matchmaking — do not assume).
-- "champion_select": vertical list with allies on the left (with lane labels in Spanish: SUPERIOR, JUNGLA, CENTRAL, INFERIOR, SOPORTE) and enemies on the right.
+Write champion names in Title Case with correct punctuation: "Shaco", "Vel'Koz", "Miss Fortune", "Jhin", "Kai'Sa", "Cho'Gath", "Kog'Maw", "Rek'Sai", "Kha'Zix", "Lee Sin", "Master Yi", "Dr. Mundo", "Tahm Kench", "Twisted Fate".
 
-── WHAT TO RETURN ──
-You must return three groups:
-- "userChampion": the champion associated with the golden text, plus its lane.
-- "allies": the 4 OTHER champions on the user's team (NOT the user), each with its lane.
-- "enemies": the 5 champions on the opposing team, each with its lane.
+── STEP 3: OUTPUT FORMAT ──
 
-"userChampion" + "allies" must total 5 champions. "enemies" must total 5. Never include the user's champion inside "allies".
+If screenType is "loading", you return TWO ROWS of 5 champions each, read strictly left-to-right as they appear on screen. Do NOT try to identify which row is the user's team. Do NOT try to identify the user. Just read the champions in order.
 
-── LANE VALUES ──
-Use only these canonical lane codes: "top", "jgl", "mid", "adc", "sup".
+If screenType is "champion_select", you return the user's champion, the 4 other allies (with their Spanish lane labels mapped to codes), and the 5 enemies. Detect the user by the golden/yellow summoner name on the ally list.
 
-For champion_select, read the Spanish lane label next to each ally and map it:
-SUPERIOR → "top", JUNGLA → "jgl", CENTRAL → "mid", INFERIOR → "adc", SOPORTE → "sup".
-For enemies in champion_select, infer lane from champion role and position as best you can.
+── LANE CODES ──
+Only use: "top", "jgl", "mid", "adc", "sup".
+Map Spanish labels: SUPERIOR → "top", JUNGLA → "jgl", CENTRAL → "mid", INFERIOR → "adc", SOPORTE → "sup".
 
-For loading screen, infer each champion's lane from visual cues you can read in the image (Smite summoner spell icon = jungler; bot lane duo = adc + support; the remaining three split into top/mid and you decide from context). Do NOT assume any fixed positional order — in a loading screen champions are not guaranteed to be ordered top-jgl-mid-adc-sup on screen.
-
-── CHAMPION NAMES ──
-Return the BASE champion name, not the skin name. Examples: "Mordekaiser" not "Mordekaiser Pentakill"; "Shaco" not "Shaco Arcanista"; "Kled" not "Sir Kled"; "Warwick" not "Urfwick"; "Teemo" not "Beemo"; "Yuumi" not "Yuumiel".
-
-Write champion names in Title Case with correct punctuation: "Shaco", "Vel'Koz", "Miss Fortune", "Jhin", "Kai'Sa", "Cho'Gath", "Kog'Maw", "Rek'Sai", "Kha'Zix".
-
-── JSON FORMAT ──
-Respond with EXACTLY this JSON structure, no markdown:
+── JSON FORMAT FOR "loading" ──
 {
-  "debugGoldenText": "describe the golden/yellow text and its location",
-  "screenType": "loading" | "champion_select",
+  "screenType": "loading",
+  "topRow": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
+  "bottomRow": ["Champion1", "Champion2", "Champion3", "Champion4", "Champion5"],
+  "confidence": "high" | "medium" | "low"
+}
+
+── JSON FORMAT FOR "champion_select" ──
+{
+  "screenType": "champion_select",
   "userChampion": { "champion": "ChampionName", "lane": "top" | "jgl" | "mid" | "adc" | "sup" },
   "allies": [
     { "champion": "ChampionName", "lane": "top" | "jgl" | "mid" | "adc" | "sup" },
@@ -89,7 +83,9 @@ Respond with EXACTLY this JSON structure, no markdown:
     { "champion": "ChampionName", "lane": "top" | "jgl" | "mid" | "adc" | "sup" }
   ],
   "confidence": "high" | "medium" | "low"
-}`;
+}
+
+Respond with ONLY the JSON matching the detected screenType. No markdown.`;
 
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 55000); // 55s para dar margen a Vercel (60s limit)

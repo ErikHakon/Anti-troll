@@ -609,8 +609,57 @@ function WardSpotsCard({ text }) {
 
 /* ─── Screenshot Components ─── */
 function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
-  const [localComp, setLocalComp] = useState(JSON.parse(JSON.stringify(composition)));
+  // Determinar paso inicial: si es loading screen sin user, arrancamos en pick-user; si no, en confirm.
+  const initialStep = composition.mode === "loading-pick-user" ? "pick-user" : "confirm";
+  const [step, setStep] = useState(initialStep);
+  // Estructura editable en paso pick-user
+  const [pickState, setPickState] = useState(() => {
+    if (composition.mode === "loading-pick-user") {
+      return JSON.parse(JSON.stringify({
+        topRow: composition.topRow,
+        bottomRow: composition.bottomRow,
+      }));
+    }
+    return null;
+  });
+  // Estructura del paso confirm (userChampion + allies + enemies)
+  const [localComp, setLocalComp] = useState(() => {
+    if (composition.mode === "confirm-composition") {
+      return JSON.parse(JSON.stringify({
+        userChampion: composition.userChampion,
+        allies: composition.allies,
+        enemies: composition.enemies,
+        confidence: composition.confidence,
+      }));
+    }
+    return null;
+  });
 
+  // Editar lane en paso pick-user
+  const updatePickLane = (row, index, value) => {
+    const updated = JSON.parse(JSON.stringify(pickState));
+    updated[row][index].lane = value;
+    setPickState(updated);
+  };
+
+  // Confirmar que un champion de pickState es el user → pasar a paso confirm
+  const pickAsUser = (row, index) => {
+    const selected = pickState[row][index];
+    const sameRow = pickState[row];
+    const otherRow = row === "topRow" ? pickState.bottomRow : pickState.topRow;
+    const allies = sameRow.filter((_, i) => i !== index);
+    const enemies = otherRow.slice();
+    const newComp = {
+      userChampion: { champion: selected.champion, lane: selected.lane },
+      allies,
+      enemies,
+      confidence: composition.confidence,
+    };
+    setLocalComp(newComp);
+    setStep("confirm");
+  };
+
+  // Editar props del paso confirm (user / aliados / enemigos)
   const updateProp = (type, index, field, value) => {
     const updated = { ...localComp };
     if (type === 'user') updated.userChampion[field] = value;
@@ -618,118 +667,187 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
     setLocalComp(updated);
   };
 
+  // Botón "soy yo" sobre aliados en el paso confirm (intercambia user con un aliado)
   const swapWithUser = (allyIndex) => {
     const updated = JSON.parse(JSON.stringify(localComp));
     const previousUser = { ...updated.userChampion };
     const selectedAlly = { ...updated.allies[allyIndex] };
-    // Intercambiar datos del usuario con el aliado seleccionado
     updated.userChampion = { champion: selectedAlly.champion, lane: selectedAlly.lane };
     updated.allies[allyIndex] = { champion: previousUser.champion, lane: previousUser.lane };
     setLocalComp(updated);
   };
 
-  return (
-    <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20, backdropFilter:"blur(4px)" }}>
-      <div style={{ background:"#12121f", border:"1px solid rgba(200,155,60,0.3)", borderRadius:16, maxWidth:600, width:"100%", maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 64px rgba(0,0,0,0.8)" }}>
-        <div style={{ padding:"24px 28px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
-          <h2 style={{ margin:0, color:"#c89b3c", fontSize:20, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Composición Detectada</h2>
-          {localComp.confidence === 'low' && (
-            <div style={{ marginTop:12, background:"rgba(255,215,0,0.1)", border:"1px solid rgba(255,215,0,0.2)", borderRadius:8, padding:"8px 12px", color:"#ffd700", fontSize:13, display:"flex", alignItems:"center", gap:8 }}>
-              <span>⚠️</span> Revisá los campeones, la detección puede no ser exacta.
-            </div>
-          )}
-        </div>
-        
-        {(!localComp.userChampion.lane || localComp.allies.some(a => !a.lane) || localComp.enemies.some(e => !e.lane)) && (
-          <div style={{ padding:"10px 28px", color:"#ffb347", fontSize:12, textAlign:"center", background:"rgba(255,179,71,0.08)", borderTop:"1px solid rgba(255,179,71,0.2)" }}>
-            ⚠️ Asigná todos los roles antes de continuar
-          </div>
-        )}
+  // Volver al paso pick-user (solo disponible si veníamos de ahí)
+  const backToPick = () => {
+    setStep("pick-user");
+  };
 
-        <div style={{ overflowY:"auto", padding:"20px 28px", display:"flex", flexDirection:"column", gap:20 }}>
-          <section>
-            <div style={{ fontSize:11, fontWeight:800, color:"#d4a843", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Tu Campeón</div>
-            <div style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(200,155,60,0.05)", padding:12, borderRadius:12, border:"1px solid rgba(200,155,60,0.15)" }}>
-              <ChampPortrait name={localComp.userChampion.champion} size={40} />
-              <div style={{ flex:1, fontWeight:700, color:"#f0e6d2" }}>{localComp.userChampion.champion}</div>
-              <MiniLaneSelector value={localComp.userChampion.lane ? localComp.userChampion.lane.toUpperCase() : ""} onChange={(l) => updateProp('user', null, 'lane', l.toLowerCase())} />
-            </div>
-          </section>
-
-          <section>
-            <div style={{ fontSize:11, fontWeight:800, color:"#2dd66a", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Aliados</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {localComp.allies.map((a, i) => (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(29,186,90,0.05)", padding:"8px 12px", borderRadius:10 }}>
-                  <ChampPortrait name={a.champion} size={32} />
-                  <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{a.champion}</div>
-                  <MiniLaneSelector value={a.lane ? a.lane.toUpperCase() : ""} onChange={(l) => updateProp('allies', i, 'lane', l.toLowerCase())} />
-                  <button
-                    onClick={() => swapWithUser(i)}
-                    title="Este es mi campeón"
-                    style={{
-                      background: "rgba(200,155,60,0.08)",
-                      border: "1px solid rgba(200,155,60,0.25)",
-                      color: "#c89b3c",
-                      borderRadius: 20,
-                      padding: "3px 10px",
-                      fontSize: 10,
-                      fontWeight: 700,
-                      cursor: "pointer",
-                      whiteSpace: "nowrap",
-                      flexShrink: 0,
-                      letterSpacing: "0.5px",
-                    }}
-                  >
-                    soy yo
-                  </button>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section>
-            <div style={{ fontSize:11, fontWeight:800, color:"#ff4d63", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Enemigos</div>
-            <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-              {localComp.enemies.map((e, i) => (
-                <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(232,64,87,0.05)", padding:"8px 12px", borderRadius:10 }}>
-                  <ChampPortrait name={e.champion} size={32} />
-                  <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{e.champion}</div>
-                  <MiniLaneSelector value={e.lane ? e.lane.toUpperCase() : ""} onChange={(l) => updateProp('enemies', i, 'lane', l.toLowerCase())} />
-                </div>
-              ))}
-            </div>
-          </section>
-        </div>
-
-        <div style={{ padding:"20px 28px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:12 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.05)", border:"none", borderRadius:10, color:"#9a9590", fontWeight:700, cursor:"pointer" }}>Cancelar</button>
-          {(() => {
-            const allLanesSet = !!localComp.userChampion.lane && 
-              localComp.allies.every(a => a.lane) && 
-              localComp.enemies.every(e => e.lane);
-            return (
-              <button 
-                onClick={() => onConfirm(localComp)} 
-                disabled={!allLanesSet}
-                style={{ 
-                  flex:2, padding:"14px", 
-                  background: allLanesSet ? "#c89b3c" : "rgba(200,155,60,0.3)", 
-                  border:"none", borderRadius:10, 
-                  color:"#0a0a1a", fontWeight:800, 
-                  textTransform:"uppercase", 
-                  cursor: allLanesSet ? "pointer" : "not-allowed",
-                  boxShadow: allLanesSet ? "0 4px 16px rgba(200,155,60,0.2)" : "none"
+  // ─── Render paso pick-user ───
+  if (step === "pick-user" && pickState) {
+    const renderRow = (rowKey, rowLabel) => (
+      <section>
+        <div style={{ fontSize:11, fontWeight:800, color:"#c89b3c", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>{rowLabel}</div>
+        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+          {pickState[rowKey].map((c, i) => (
+            <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(200,155,60,0.04)", padding:"8px 12px", borderRadius:10, border:"1px solid rgba(200,155,60,0.08)" }}>
+              <ChampPortrait name={c.champion} size={32} />
+              <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{c.champion}</div>
+              <MiniLaneSelector value={c.lane ? c.lane.toUpperCase() : ""} onChange={(l) => updatePickLane(rowKey, i, l.toLowerCase())} />
+              <button
+                onClick={() => pickAsUser(rowKey, i)}
+                title="Este es mi campeón"
+                style={{
+                  background: "rgba(200,155,60,0.15)",
+                  border: "1px solid rgba(200,155,60,0.4)",
+                  color: "#c89b3c",
+                  borderRadius: 20,
+                  padding: "4px 12px",
+                  fontSize: 10,
+                  fontWeight: 700,
+                  cursor: "pointer",
+                  whiteSpace: "nowrap",
+                  flexShrink: 0,
+                  letterSpacing: "0.5px",
                 }}
               >
-                Confirmar y Analizar
+                soy yo
               </button>
-            );
-          })()}
+            </div>
+          ))}
+        </div>
+      </section>
+    );
+
+    return (
+      <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20, backdropFilter:"blur(4px)" }}>
+        <div style={{ background:"#12121f", border:"1px solid rgba(200,155,60,0.3)", borderRadius:16, maxWidth:600, width:"100%", maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 64px rgba(0,0,0,0.8)" }}>
+          <div style={{ padding:"24px 28px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+            <h2 style={{ margin:0, color:"#c89b3c", fontSize:20, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>¿Cuál es tu Campeón?</h2>
+            <div style={{ marginTop:8, color:"#9a9590", fontSize:13 }}>Tocá "soy yo" sobre tu campeón. Si alguna línea está mal, corregila antes.</div>
+          </div>
+
+          <div style={{ overflowY:"auto", padding:"20px 28px", display:"flex", flexDirection:"column", gap:20 }}>
+            {renderRow("topRow", "Equipo de Arriba")}
+            {renderRow("bottomRow", "Equipo de Abajo")}
+          </div>
+
+          <div style={{ padding:"20px 28px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:12 }}>
+            <button onClick={onCancel} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.05)", border:"none", borderRadius:10, color:"#9a9590", fontWeight:700, cursor:"pointer" }}>Cancelar</button>
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  // ─── Render paso confirm ───
+  if (step === "confirm" && localComp) {
+    const cameFromPick = composition.mode === "loading-pick-user";
+    const allLanesSet = !!localComp.userChampion.lane &&
+      localComp.allies.every(a => a.lane) &&
+      localComp.enemies.every(e => e.lane);
+
+    return (
+      <div style={{ position:"fixed", top:0, left:0, right:0, bottom:0, background:"rgba(0,0,0,0.85)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:20, backdropFilter:"blur(4px)" }}>
+        <div style={{ background:"#12121f", border:"1px solid rgba(200,155,60,0.3)", borderRadius:16, maxWidth:600, width:"100%", maxHeight:"90vh", overflow:"hidden", display:"flex", flexDirection:"column", boxShadow:"0 24px 64px rgba(0,0,0,0.8)" }}>
+          <div style={{ padding:"24px 28px", borderBottom:"1px solid rgba(255,255,255,0.06)" }}>
+            <h2 style={{ margin:0, color:"#c89b3c", fontSize:20, fontWeight:800, textTransform:"uppercase", letterSpacing:1 }}>Composición Detectada</h2>
+            {localComp.confidence === 'low' && (
+              <div style={{ marginTop:12, background:"rgba(255,215,0,0.1)", border:"1px solid rgba(255,215,0,0.2)", borderRadius:8, padding:"8px 12px", color:"#ffd700", fontSize:13, display:"flex", alignItems:"center", gap:8 }}>
+                <span>⚠️</span> Revisá los campeones, la detección puede no ser exacta.
+              </div>
+            )}
+          </div>
+
+          {(!localComp.userChampion.lane || localComp.allies.some(a => !a.lane) || localComp.enemies.some(e => !e.lane)) && (
+            <div style={{ padding:"10px 28px", color:"#ffb347", fontSize:12, textAlign:"center", background:"rgba(255,179,71,0.08)", borderTop:"1px solid rgba(255,179,71,0.2)" }}>
+              ⚠️ Asigná todos los roles antes de continuar
+            </div>
+          )}
+
+          <div style={{ overflowY:"auto", padding:"20px 28px", display:"flex", flexDirection:"column", gap:20 }}>
+            <section>
+              <div style={{ fontSize:11, fontWeight:800, color:"#d4a843", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Tu Campeón</div>
+              <div style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(200,155,60,0.05)", padding:12, borderRadius:12, border:"1px solid rgba(200,155,60,0.15)" }}>
+                <ChampPortrait name={localComp.userChampion.champion} size={40} />
+                <div style={{ flex:1, fontWeight:700, color:"#f0e6d2" }}>{localComp.userChampion.champion}</div>
+                <MiniLaneSelector value={localComp.userChampion.lane ? localComp.userChampion.lane.toUpperCase() : ""} onChange={(l) => updateProp('user', null, 'lane', l.toLowerCase())} />
+              </div>
+            </section>
+
+            <section>
+              <div style={{ fontSize:11, fontWeight:800, color:"#2dd66a", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Aliados</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {localComp.allies.map((a, i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(29,186,90,0.05)", padding:"8px 12px", borderRadius:10 }}>
+                    <ChampPortrait name={a.champion} size={32} />
+                    <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{a.champion}</div>
+                    <MiniLaneSelector value={a.lane ? a.lane.toUpperCase() : ""} onChange={(l) => updateProp('allies', i, 'lane', l.toLowerCase())} />
+                    <button
+                      onClick={() => swapWithUser(i)}
+                      title="Este es mi campeón"
+                      style={{
+                        background: "rgba(200,155,60,0.08)",
+                        border: "1px solid rgba(200,155,60,0.25)",
+                        color: "#c89b3c",
+                        borderRadius: 20,
+                        padding: "3px 10px",
+                        fontSize: 10,
+                        fontWeight: 700,
+                        cursor: "pointer",
+                        whiteSpace: "nowrap",
+                        flexShrink: 0,
+                        letterSpacing: "0.5px",
+                      }}
+                    >
+                      soy yo
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </section>
+
+            <section>
+              <div style={{ fontSize:11, fontWeight:800, color:"#ff4d63", textTransform:"uppercase", letterSpacing:1, marginBottom:10 }}>Enemigos</div>
+              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                {localComp.enemies.map((e, i) => (
+                  <div key={i} style={{ display:"flex", alignItems:"center", gap:12, background:"rgba(232,64,87,0.05)", padding:"8px 12px", borderRadius:10 }}>
+                    <ChampPortrait name={e.champion} size={32} />
+                    <div style={{ flex:1, fontSize:14, color:"#c8c0b0" }}>{e.champion}</div>
+                    <MiniLaneSelector value={e.lane ? e.lane.toUpperCase() : ""} onChange={(l) => updateProp('enemies', i, 'lane', l.toLowerCase())} />
+                  </div>
+                ))}
+              </div>
+            </section>
+          </div>
+
+          <div style={{ padding:"20px 28px", borderTop:"1px solid rgba(255,255,255,0.06)", display:"flex", gap:12 }}>
+            {cameFromPick && (
+              <button onClick={backToPick} style={{ padding:"14px 16px", background:"rgba(255,255,255,0.05)", border:"none", borderRadius:10, color:"#9a9590", fontWeight:700, cursor:"pointer", whiteSpace:"nowrap" }}>← Volver a elegir</button>
+            )}
+            <button onClick={onCancel} style={{ flex:1, padding:"14px", background:"rgba(255,255,255,0.05)", border:"none", borderRadius:10, color:"#9a9590", fontWeight:700, cursor:"pointer" }}>Cancelar</button>
+            <button
+              onClick={() => onConfirm(localComp)}
+              disabled={!allLanesSet}
+              style={{
+                flex:2, padding:"14px",
+                background: allLanesSet ? "#c89b3c" : "rgba(200,155,60,0.3)",
+                border:"none", borderRadius:10,
+                color:"#0a0a1a", fontWeight:800,
+                textTransform:"uppercase",
+                cursor: allLanesSet ? "pointer" : "not-allowed",
+                boxShadow: allLanesSet ? "0 4px 16px rgba(200,155,60,0.2)" : "none"
+              }}
+            >
+              Confirmar y Analizar
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Fallback (no debería llegar aquí en condiciones normales)
+  return null;
 }
 
 /* ─── Coach Tool ─── */
@@ -785,13 +903,7 @@ function CoachTool({ user, ddragonVer }) {
 
         const data = await res.json();
 
-        console.log("[VISION DEBUG] === Respuesta de Haiku ===");
-        console.log("[VISION DEBUG] debugGoldenText:", data.debugGoldenText);
-        console.log("[VISION DEBUG] screenType:", data.screenType);
-        console.log("[VISION DEBUG] userChampion:", data.userChampion);
-        console.log("[VISION DEBUG] allies:", data.allies);
-        console.log("[VISION DEBUG] enemies:", data.enemies);
-        console.log("[VISION DEBUG] confidence:", data.confidence);
+        console.log("[VISION DEBUG] === Respuesta de Haiku ===", data);
 
         if (!res.ok) {
           setScreenshotError(data.error || "Error al analizar la imagen");
@@ -824,13 +936,40 @@ function CoachTool({ user, ddragonVer }) {
           lane: normalizeLane(slot?.lane),
         });
 
-        const transformed = {
-          userChampion: normalizeSlot(data.userChampion),
-          allies: (data.allies || []).map(normalizeSlot),
-          enemies: (data.enemies || []).map(normalizeSlot),
-          confidence: data.confidence,
-          screenType: data.screenType,
-        };
+        // Lanes posicionales en loading screen: izquierda→derecha dentro de cada fila
+        const POSITIONAL_LANES = ["top", "jgl", "mid", "adc", "sup"];
+
+        let transformed;
+
+        if (data.screenType === "loading") {
+          // Contrato loading: dos filas, sin user pre-detectado.
+          // El cliente asigna lanes posicionalmente y el usuario elige su campeón en el modal.
+          const topRow = (data.topRow || []).map((champ, i) => ({
+            champion: toTitleCase(champ),
+            lane: POSITIONAL_LANES[i] || null,
+          }));
+          const bottomRow = (data.bottomRow || []).map((champ, i) => ({
+            champion: toTitleCase(champ),
+            lane: POSITIONAL_LANES[i] || null,
+          }));
+          transformed = {
+            mode: "loading-pick-user",
+            topRow,
+            bottomRow,
+            confidence: data.confidence,
+            screenType: data.screenType,
+          };
+        } else {
+          // Contrato champion_select: user + aliados + enemigos ya detectados
+          transformed = {
+            mode: "confirm-composition",
+            userChampion: normalizeSlot(data.userChampion),
+            allies: (data.allies || []).map(normalizeSlot),
+            enemies: (data.enemies || []).map(normalizeSlot),
+            confidence: data.confidence,
+            screenType: data.screenType,
+          };
+        }
 
         console.log("[VISION DEBUG] === Composición transformada ===", transformed);
 
