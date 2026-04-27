@@ -72,8 +72,29 @@ Do NOT identify champions by the visual appearance of the splash art. Epic skins
 
 ── FOR CHAMPION SELECT ──
 
-Read the champion name written next to each portrait. Identify the user by the golden/yellow summoner name on the ally list.
-Map Spanish lane labels: SUPERIOR → "top", JUNGLA → "jgl", CENTRAL → "mid", INFERIOR → "adc", SOPORTE → "sup".
+The LEFT side shows 5 allied champions in a vertical list. Each 
+ally has a Spanish lane label (SUPERIOR, JUNGLA, CENTRAL, 
+INFERIOR, SOPORTE) written next to their portrait. Read every 
+lane label carefully — they are always explicit.
+
+Identify the user by the golden/yellow summoner name on the 
+ally list. The user IS one of the 5 allies on the left.
+
+Return:
+- "userChampion": the user's champion with the lane read from 
+  their label on the left side.
+- "allies": the OTHER 4 champions on the left side (NOT the 
+  user), each with their lane read from their label. Must be 
+  exactly 4 champions, all different from userChampion.
+- "enemies": the 5 champions on the RIGHT side with inferred 
+  lanes.
+
+CRITICAL: userChampion + allies must total exactly 5 unique 
+champions. Never include the user's champion inside allies. 
+Never omit any of the 5 left-side champions.
+
+Map Spanish lane labels: SUPERIOR → "top", JUNGLA → "jgl", 
+CENTRAL → "mid", INFERIOR → "adc", SOPORTE → "sup".
 
 ── CHAMPION NAME FORMAT ──
 Return the BASE champion name in Title Case with correct punctuation:
