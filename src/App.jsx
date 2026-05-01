@@ -981,6 +981,24 @@ function CoachTool({ user, ddragonVer }) {
     reader.readAsDataURL(file);
   };
 
+  const pasteFromClipboard = async () => {
+    try {
+      const items = await navigator.clipboard.read();
+      for (const item of items) {
+        const imageType = item.types.find(t => t.startsWith("image/"));
+        if (imageType) {
+          const blob = await item.getType(imageType);
+          const file = new File([blob], "clipboard.png", { type: imageType });
+          handleScreenshotUpload(file);
+          return;
+        }
+      }
+      setScreenshotError("No hay imagen en el portapapeles");
+    } catch {
+      setScreenshotError("No se pudo acceder al portapapeles");
+    }
+  };
+
   const confirmDetectedComposition = (comp) => {
     // 1. My Champ & Lane
     setMyChamp(comp.userChampion.champion);
@@ -1263,10 +1281,15 @@ function CoachTool({ user, ddragonVer }) {
       <div style={{ background:"rgba(200,155,60,0.05)", border:"1px solid rgba(200,155,60,0.25)", borderRadius:12, padding:20, marginBottom:14 }}>
         <div style={{ fontSize:13, textTransform:"uppercase", letterSpacing:"2px", color:"#d4a843", marginBottom:12, fontWeight:700, display:"flex", justifyContent:"space-between", alignItems:"center" }}>
           <span>🎮 Tu campeón</span>
-          <button onClick={() => fileInputRef.current?.click()} style={{ background:"transparent", border:"1px solid rgba(200,155,60,0.3)", color:"#c89b3c", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"0.2s" }} onMouseEnter={(e) => e.currentTarget.style.background="rgba(200,155,60,0.1)"} onMouseLeave={(e) => e.currentTarget.style.background="transparent"}>
-            📷 Subir captura
-          </button>
-          <input type="file" ref={fileInputRef} onChange={(e) => handleScreenshotUpload(e.target.files[0])} accept="image/*" style={{ display:"none" }} />
+          <div style={{ display:"flex", gap:6 }}>
+            <button onClick={() => fileInputRef.current?.click()} style={{ background:"transparent", border:"1px solid rgba(200,155,60,0.3)", color:"#c89b3c", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"0.2s" }} onMouseEnter={(e) => e.currentTarget.style.background="rgba(200,155,60,0.1)"} onMouseLeave={(e) => e.currentTarget.style.background="transparent"}>
+              📷 Subir captura
+            </button>
+            <button onClick={pasteFromClipboard} style={{ background:"transparent", border:"1px solid rgba(200,155,60,0.3)", color:"#c89b3c", borderRadius:6, padding:"4px 10px", fontSize:11, fontWeight:700, cursor:"pointer", display:"flex", alignItems:"center", gap:6, transition:"0.2s" }} onMouseEnter={(e) => e.currentTarget.style.background="rgba(200,155,60,0.1)"} onMouseLeave={(e) => e.currentTarget.style.background="transparent"}>
+              📋 Pegar captura
+            </button>
+            <input type="file" ref={fileInputRef} onChange={(e) => handleScreenshotUpload(e.target.files[0])} accept="image/*" style={{ display:"none" }} />
+          </div>
         </div>
         {screenshotLoading && <div style={{ fontSize:12, color:"#c89b3c", marginBottom:10, animation:"pulse 1.5s infinite" }}>✨ Analizando imagen...</div>}
         {screenshotError && <div style={{ fontSize:12, color:"#ff4d63", marginBottom:10 }}>{screenshotError}</div>}
