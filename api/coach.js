@@ -128,25 +128,40 @@ export default async function handler(req, res) {
     return res.status(429).json({ error: "Demasiadas consultas. Esperá un momento antes de continuar." });
   }
 
+  const sanitize = (s) => typeof s === "string" ? s.replace(/[\n\r]/g, " ").slice(0, 100) : "";
+
   const { champion, lane, buildType, laneOpponent, allies, enemies } = req.body || {};
 
-  if (!champion || !laneOpponent) {
+  const sChampion = sanitize(champion);
+  const sLane = sanitize(lane);
+  const sBuildType = sanitize(buildType);
+  const sLaneOpponent = sanitize(laneOpponent);
+
+  if (!sChampion || !sLaneOpponent) {
     return res.status(400).json({ error: "Missing required fields: champion, laneOpponent" });
   }
 
+  const sanitizeArray = (arr) =>
+    Array.isArray(arr)
+      ? arr.slice(0, 5).map(s => sanitize(s)).filter(Boolean)
+      : [];
+
+  const sAllies = sanitizeArray(allies);
+  const sEnemies = sanitizeArray(enemies);
+
+  const allyList = sAllies.length > 0 ? sAllies.join(", ") : "No especificados";
+  const enemyList = sEnemies.length > 0 ? sEnemies.join(", ") : "No especificados";
+
   // Build type instruction (dynamic → goes in user message)
   let buildInstruction = "";
-  if (buildType === "ad") buildInstruction = "\nTIPO DE BUILD FORZADO: AD (Attack Damage). Toda la build debe ser AD, no recomiendes items AP.";
-  else if (buildType === "ap") buildInstruction = "\nTIPO DE BUILD FORZADO: AP (Ability Power). Toda la build debe ser AP, no recomiendes items AD.";
-  else if (buildType === "hybrid") buildInstruction = "\nTIPO DE BUILD FORZADO: HÍBRIDO. La build debe mezclar items AD y AP.";
-
-  const allyList = Array.isArray(allies) && allies.length > 0 ? allies.join(", ") : "No especificados";
-  const enemyList = Array.isArray(enemies) && enemies.length > 0 ? enemies.join(", ") : "No especificados";
+  if (sBuildType === "ad") buildInstruction = "\nTIPO DE BUILD FORZADO: AD (Attack Damage). Toda la build debe ser AD, no recomiendes items AP.";
+  else if (sBuildType === "ap") buildInstruction = "\nTIPO DE BUILD FORZADO: AP (Ability Power). Toda la build debe ser AP, no recomiendes items AD.";
+  else if (sBuildType === "hybrid") buildInstruction = "\nTIPO DE BUILD FORZADO: HÍBRIDO. La build debe mezclar items AD y AP.";
 
   const userMessage =
-    `MI CAMPEÓN: ${champion} (${lane})${buildInstruction}\n` +
+    `MI CAMPEÓN: ${sChampion} (${sLane})${buildInstruction}\n` +
     `MIS ALIADOS: ${allyList}\n` +
-    `OPONENTE DE LÍNEA: ${laneOpponent}\n` +
+    `OPONENTE DE LÍNEA: ${sLaneOpponent}\n` +
     `OTROS ENEMIGOS: ${enemyList}`;
 
   const controller = new AbortController();
