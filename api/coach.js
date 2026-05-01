@@ -95,12 +95,19 @@ Usá esta estructura exacta:
 const ipCache = new Map();
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  const ALLOWED_ORIGINS = ["https://untroll.gg", "https://www.untroll.gg"];
+  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGINS.includes(origin) ? origin : "");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Vary", "Origin");
 
   if (req.method === "OPTIONS") {
     return res.status(204).end();
+  }
+
+  if (req.method !== "POST") {
+    return res.status(405).json({ error: "Method not allowed" });
   }
 
   // Layer 1: IP-based Rate Limiting (10 req/hour)
@@ -119,10 +126,6 @@ export default async function handler(req, res) {
 
   if (userData.count > 10) {
     return res.status(429).json({ error: "Demasiadas consultas. Esperá un momento antes de continuar." });
-  }
-
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
   }
 
   const { champion, lane, buildType, laneOpponent, allies, enemies } = req.body || {};
