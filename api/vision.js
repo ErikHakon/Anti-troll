@@ -1,8 +1,13 @@
+const ipCacheVision = new Map();
+
 export default async function handler(req, res) {
   // 1. Headers CORS y Checks Iniciales (Estilo coach.js)
-  res.setHeader("Access-Control-Allow-Origin", "*");
+  const origin = req.headers.origin;
+  const ALLOWED_ORIGINS = ["https://untroll.gg", "https://www.untroll.gg"];
+  res.setHeader("Access-Control-Allow-Origin", ALLOWED_ORIGINS.includes(origin) ? origin : "");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
+  res.setHeader("Vary", "Origin");
 
   if (req.method === "OPTIONS") {
     return res.status(204).end();
@@ -10,6 +15,21 @@ export default async function handler(req, res) {
 
   if (req.method !== "POST") {
     return res.status(405).json({ error: "Method not allowed" });
+  }
+
+  // Rate limiting: 10 req/hora por IP
+  const ip = req.headers["x-forwarded-for"] || req.socket.remoteAddress || "unknown";
+  const now = Date.now();
+  const userData = ipCacheVision.get(ip) || { count: 0, firstReset: now };
+  if (now - userData.firstReset > 3600000) {
+    userData.count = 1;
+    userData.firstReset = now;
+  } else {
+    userData.count++;
+  }
+  ipCacheVision.set(ip, userData);
+  if (userData.count > 10) {
+    return res.status(429).json({ error: "Demasiadas consultas. Esperá un momento antes de continuar." });
   }
 
   // 2. Validación de Entrada
@@ -212,7 +232,7 @@ Respond with ONLY the JSON matching the detected screenType. No markdown.`;
     if (err.name === "AbortError") {
       return res.status(504).json({ error: "La solicitud excedió el tiempo límite (timeout)." });
     }
-    return res.status(500).json({ error: err.message });
+    return res.status(500).json({ error: "Error interno del servidor" });
   } finally {
     clearTimeout(timeout);
   }
