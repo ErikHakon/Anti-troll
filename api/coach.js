@@ -1,3 +1,9 @@
+import { createClient } from '@supabase/supabase-js';
+
+const supabase = createClient(
+  process.env.SUPABASE_URL,
+  process.env.SUPABASE_SERVICE_ROLE_KEY
+);
 
 const SYSTEM_MESSAGE = `Sos un coach challenger de League of Legends experto en Season 2025.
 Tu tarea es analizar la composición de ambos equipos y generar un game plan completo EN ESPAÑOL.
@@ -126,6 +132,33 @@ export default async function handler(req, res) {
 
   if (userData.count > 10) {
     return res.status(429).json({ error: "Demasiadas consultas. Esperá un momento antes de continuar." });
+  }
+
+  // Layer 2: límite mensual por usuario autenticado
+  const authHeader = req.headers["authorization"] || "";
+  const accessToken = authHeader.replace("Bearer ", "").trim();
+
+  let userId = null;
+  if (accessToken) {
+    const { data: { user }, error } = await supabase.auth.getUser(accessToken);
+    if (!error && user) userId = user.id;
+  }
+
+  if (userId) {
+    const { data: limitData, error: limitError } = await supabase
+      .rpc("increment_query_count", { user_id: userId });
+
+    if (limitError) {
+      return res.status(500).json({ error: "Error al verificar el límite de consultas." });
+    }
+
+    if (!limitData.allowed) {
+      return res.status(429).json({
+        error: "limite_alcanzado",
+        queries_this_month: limitData.queries_this_month,
+        limit: limitData.limit
+      });
+    }
   }
 
   const sanitize = (s) => typeof s === "string" ? s.replace(/[\n\r]/g, " ").slice(0, 100) : "";
