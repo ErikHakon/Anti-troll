@@ -898,8 +898,6 @@ function CoachTool({ user, ddragonVer }) {
 
         const data = await res.json();
 
-        console.log("[VISION DEBUG] === Respuesta de Haiku ===", data);
-
         if (!res.ok) {
           setScreenshotError(data.error || "Error al analizar la imagen");
           setScreenshotLoading(false);
@@ -967,8 +965,6 @@ function CoachTool({ user, ddragonVer }) {
             screenType: data.screenType,
           };
         }
-
-        console.log("[VISION DEBUG] === Composición transformada ===", transformed);
 
         setDetectedComposition(transformed);
         setScreenshotModal(true);
