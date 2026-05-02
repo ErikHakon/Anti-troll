@@ -13,11 +13,18 @@ export default async function handler(req, res) {
     return res.status(400).json({ error: 'Email and username are required' });
   }
 
+  const safeUsername = String(username).replace(/[<>&"']/g, "").slice(0, 50);
+  const safeEmail = String(email).replace(/[<>&"']/g, "").slice(0, 254);
+
+  if (!safeUsername || !safeEmail) {
+    return res.status(400).json({ error: 'Email and username are required' });
+  }
+
   try {
     const data = await resend.emails.send({
       from: 'UnTroll <onboarding@resend.dev>',
-      to: [email],
-      subject: `¡Bienvenido a UnTroll, ${username}! Tu coach ya está listo`,
+      to: [safeEmail],
+      subject: `¡Bienvenido a UnTroll, ${safeUsername}! Tu coach ya está listo`,
       html: `
         <div style="background-color: #0d0d1a; color: #c8c8c8; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; max-width: 600px; margin: 0 auto; border-radius: 8px; overflow: hidden; border: 1px solid rgba(200, 155, 60, 0.2);">
           <!-- Header -->
@@ -40,7 +47,7 @@ export default async function handler(req, res) {
 
           <!-- Content -->
           <div style="padding: 40px 30px;">
-            <h2 style="font-size: 24px; font-weight: 800; color: #f0e6d2; margin-top: 0;">¡Hola, ${username}!</h2>
+            <h2 style="font-size: 24px; font-weight: 800; color: #f0e6d2; margin-top: 0;">¡Hola, ${safeUsername}!</h2>
             <p style="font-size: 16px; line-height: 1.6; color: #c8c8c8;">
               Bienvenido a <strong>UnTroll</strong>. Tu acceso a la mejor tecnología de análisis contextual para League of Legends ya está activo.
             </p>
@@ -81,6 +88,6 @@ export default async function handler(req, res) {
     return res.status(200).json(data);
   } catch (error) {
     console.error(error);
-    return res.status(500).json({ error: error.message });
+    return res.status(500).json({ error: 'Error interno del servidor' });
   }
 }
