@@ -846,7 +846,7 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
 }
 
 /* ─── Coach Tool ─── */
-function CoachTool({ user, ddragonVer, onQueryUsed }) {
+function CoachTool({ user, ddragonVer, onQueryUsed, onRequestLogin }) {
   const [myChamp, setMyChamp] = useState(null);
   const [myLane, setMyLane] = useState("MID");
   const [laneOpponent, setLaneOpponent] = useState(null);
@@ -866,6 +866,7 @@ function CoachTool({ user, ddragonVer, onQueryUsed }) {
 
   // Screenshot States
   const [showLimitModal, setShowLimitModal] = useState(false);
+  const [showLoginPromptModal, setShowLoginPromptModal] = useState(false);
   const [screenshotModal, setScreenshotModal] = useState(false);
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState("");
@@ -1125,6 +1126,10 @@ function CoachTool({ user, ddragonVer, onQueryUsed }) {
   }
 
   async function generate(skipCache = false) {
+    if (!user) {
+      setShowLoginPromptModal(true);
+      return;
+    }
     setLoading(true); setError(null); setResult(null); setLoadingMsg(0); setFromCache(false);
     const cacheKey = getCacheKey();
 
@@ -1569,6 +1574,31 @@ function CoachTool({ user, ddragonVer, onQueryUsed }) {
     )}
 
     {screenshotModal && <ScreenshotConfirmModal composition={detectedComposition} onCancel={() => setScreenshotModal(false)} onConfirm={confirmDetectedComposition} />}
+
+    {showLoginPromptModal && (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+        <div style={{ background:"#0d0d1a", border:"1px solid rgba(200,155,60,0.4)", borderRadius:16, padding:36, maxWidth:400, width:"100%", textAlign:"center" }}>
+          <div style={{ fontSize:48, marginBottom:16 }}>🔒</div>
+          <h2 style={{ color:"#c89b3c", fontSize:22, fontWeight:900, margin:"0 0 12px", letterSpacing:1 }}>Creá tu cuenta gratis</h2>
+          <p style={{ color:"#c8c8c8", fontSize:15, lineHeight:1.6, margin:"0 0 24px" }}>
+            Para generar tu game plan necesitás una cuenta.<br/>
+            Es gratis e incluye <strong style={{ color:"#c89b3c" }}>10 consultas por mes</strong>.
+          </p>
+          <button
+            onClick={() => { setShowLoginPromptModal(false); if (typeof onRequestLogin === "function") onRequestLogin(); }}
+            style={{ width:"100%", background:"#c89b3c", color:"#080810", border:"none", borderRadius:8, padding:"14px 0", fontSize:16, fontWeight:900, cursor:"pointer", marginBottom:12, letterSpacing:0.5 }}
+          >
+            REGISTRARME GRATIS
+          </button>
+          <button
+            onClick={() => setShowLoginPromptModal(false)}
+            style={{ width:"100%", background:"transparent", color:"#888", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"10px 0", fontSize:14, cursor:"pointer" }}
+          >
+            Ahora no
+          </button>
+        </div>
+      </div>
+    )}
 
     {showLimitModal && (
       <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
@@ -2655,6 +2685,7 @@ export default function App() {
               user={user}
               ddragonVer={ddragonVer}
               onQueryUsed={() => setUser(prev => ({ ...prev, queries_this_month: (prev.queries_this_month ?? 0) + 1 }))}
+              onRequestLogin={() => setPage("auth")}
             />
           </div>
 
