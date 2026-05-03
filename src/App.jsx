@@ -2187,6 +2187,16 @@ export default function App() {
             <button className={`nav-link ${page==="home"?"active":""}`} onClick={() => { setPage("home"); window.scrollTo({top:0,behavior:"smooth"}); }}>Inicio</button>
             <button className="nav-link" onClick={scrollToTool}>Coach</button>
             <button className={`nav-link ${page==="legal"?"active":""}`} onClick={() => { setPage("legal"); window.scrollTo({top:0,behavior:"smooth"}); }}>Legal</button>
+            {user && user.tier !== "premium" && (
+              <button
+                onClick={() => window.open("https://untroll.gg/premium", "_blank")}
+                style={{ background:"linear-gradient(135deg,#c89b3c,#a07830)", border:"none", color:"#080810", padding:"7px 16px", borderRadius:6, fontSize:12, fontWeight:800, cursor:"pointer", fontFamily:"'Outfit'", letterSpacing:"0.5px", transition:"all 0.2s" }}
+                onMouseEnter={e => e.currentTarget.style.transform="translateY(-1px)"}
+                onMouseLeave={e => e.currentTarget.style.transform="translateY(0)"}
+              >
+                ⭐ Premium
+              </button>
+            )}
             <div style={{ width:1, height:20, background:"rgba(255,255,255,0.06)", marginLeft:8 }} />
             {user ? (
               <div style={{ position:"relative" }}>
@@ -2256,6 +2266,15 @@ export default function App() {
           <button className="nav-link" onClick={() => { setPage("home"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>Inicio</button>
           <button className="nav-link" onClick={() => { setMobileMenu(false); scrollToTool(); }}>Coach</button>
           <button className="nav-link" onClick={() => { setPage("legal"); setMobileMenu(false); window.scrollTo({top:0,behavior:"smooth"}); }}>Legal</button>
+          {user && user.tier !== "premium" && (
+            <button
+              className="nav-link"
+              onClick={() => { setMobileMenu(false); window.open("https://untroll.gg/premium", "_blank"); }}
+              style={{ color:"#c89b3c", fontWeight:800 }}
+            >
+              ⭐ Premium
+            </button>
+          )}
           <div className="mobile-auth">
             {user ? (
               <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", width:"100%" }}>
