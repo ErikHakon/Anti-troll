@@ -846,7 +846,7 @@ function ScreenshotConfirmModal({ composition, onConfirm, onCancel }) {
 }
 
 /* ─── Coach Tool ─── */
-function CoachTool({ user, ddragonVer }) {
+function CoachTool({ user, ddragonVer, onQueryUsed }) {
   const [myChamp, setMyChamp] = useState(null);
   const [myLane, setMyLane] = useState("MID");
   const [laneOpponent, setLaneOpponent] = useState(null);
@@ -1229,6 +1229,7 @@ function CoachTool({ user, ddragonVer }) {
 
       const { parsed, tokensUsed } = result;
       setResult(parsed);
+      if (onQueryUsed) onQueryUsed();
       const setCachedResult = (key, val) => {
         try {
           localStorage.setItem(key, JSON.stringify({ data: val, ts: Date.now() }));
@@ -1383,6 +1384,34 @@ function CoachTool({ user, ddragonVer }) {
           ))}
         </div>
       </div>
+
+      {/* Contador de consultas */}
+      {user && (
+        <div style={{ textAlign:"center", marginBottom:10 }}>
+          {(() => {
+            const limit = user.tier === "premium" ? 500 : 10;
+            const used = user.queries_this_month ?? 0;
+            const remaining = Math.max(limit - used, 0);
+            const pct = Math.min(used / limit, 1);
+            const color = remaining === 0 ? "#e84057" : remaining <= 2 ? "#f0a030" : "#2dd66a";
+            return (
+              <>
+                <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:5, fontSize:12, color:"#888" }}>
+                  <span>{user.tier === "premium" ? "⭐ Premium" : "Plan gratuito"}</span>
+                  <span style={{ color, fontWeight:700 }}>{remaining} consulta{remaining !== 1 ? "s" : ""} restante{remaining !== 1 ? "s" : ""}</span>
+                </div>
+                <div style={{ height:4, background:"rgba(255,255,255,0.07)", borderRadius:4, overflow:"hidden" }}>
+                  <div style={{
+                    height:"100%", width:`${pct * 100}%`,
+                    background: pct >= 1 ? "#e84057" : pct >= 0.7 ? "#f0a030" : "#2dd66a",
+                    borderRadius:4, transition:"width 0.4s"
+                  }} />
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* Generate */}
       <button onClick={generate} disabled={!canGenerate || loading} className={loading ? "btn-loading-glow" : ""} style={{
@@ -1682,7 +1711,7 @@ export default function App() {
       // Intentar obtener el perfil existente
       let { data, error } = await supabase
         .from("profiles")
-        .select("username, region, tier, generations_today, profile_setup_complete")
+        .select("username, region, tier, generations_today, queries_this_month, profile_setup_complete")
         .eq("id", authUser.id)
         .single();
 
@@ -1718,6 +1747,7 @@ export default function App() {
           region: data.region,
           tier: data.tier,
           generations_today: data.generations_today,
+          queries_this_month: data.queries_this_month ?? 0,
           profileSetupComplete: data.profile_setup_complete,
           isIncomplete: !data.profile_setup_complete
         });
@@ -2621,7 +2651,11 @@ export default function App() {
               <h2 style={{ fontSize:42, fontWeight:900, color:"#f0e6d2", letterSpacing:"-1px", marginBottom:8 }}>AI Coach</h2>
               <p style={{ color:"#6a6a6a", fontSize:16 }}>Seleccioná los campeones y generá tu game plan</p>
             </div>
-            <CoachTool user={user} ddragonVer={ddragonVer} />
+            <CoachTool
+              user={user}
+              ddragonVer={ddragonVer}
+              onQueryUsed={() => setUser(prev => ({ ...prev, queries_this_month: (prev.queries_this_month ?? 0) + 1 }))}
+            />
           </div>
 
           {/* Features */}
