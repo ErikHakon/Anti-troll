@@ -865,6 +865,7 @@ function CoachTool({ user, ddragonVer }) {
   const [buildType, setBuildType] = useState("auto");
 
   // Screenshot States
+  const [showLimitModal, setShowLimitModal] = useState(false);
   const [screenshotModal, setScreenshotModal] = useState(false);
   const [screenshotLoading, setScreenshotLoading] = useState(false);
   const [screenshotError, setScreenshotError] = useState("");
@@ -1169,6 +1170,9 @@ function CoachTool({ user, ddragonVer }) {
           throw new Error("La IA tardó demasiado. Intentá con menos campeones seleccionados o probá de nuevo.");
         }
         const errData = await res.json().catch(() => ({}));
+        if (errData.error === "limite_alcanzado") {
+          throw new Error("limite_alcanzado");
+        }
         throw new Error(errData.error || `Error del servidor (${res.status})`);
       }
 
@@ -1267,7 +1271,11 @@ function CoachTool({ user, ddragonVer }) {
       }
     } catch (err) {
       console.error(err);
-      setError(err.message || "Error al generar el análisis. Intentá de nuevo.");
+      if (err.message === "limite_alcanzado") {
+        setShowLimitModal(true);
+      } else {
+        setError(err.message || "Error al generar el análisis. Intentá de nuevo.");
+      }
     } finally { setLoading(false); }
   }
 
@@ -1532,6 +1540,35 @@ function CoachTool({ user, ddragonVer }) {
     )}
 
     {screenshotModal && <ScreenshotConfirmModal composition={detectedComposition} onCancel={() => setScreenshotModal(false)} onConfirm={confirmDetectedComposition} />}
+
+    {showLimitModal && (
+      <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.85)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+        <div style={{ background:"#0d0d1a", border:"1px solid rgba(200,155,60,0.4)", borderRadius:16, padding:36, maxWidth:420, width:"100%", textAlign:"center" }}>
+          <div style={{ fontSize:48, marginBottom:16 }}>⚡</div>
+          <h2 style={{ color:"#c89b3c", fontSize:22, fontWeight:900, margin:"0 0 12px", letterSpacing:1 }}>Límite mensual alcanzado</h2>
+          <p style={{ color:"#c8c8c8", fontSize:15, lineHeight:1.6, margin:"0 0 24px" }}>
+            Agotaste tus 10 consultas gratuitas de este mes.<br/>
+            Actualizá a <strong style={{ color:"#c89b3c" }}>UnTroll Premium</strong> para obtener 500 consultas mensuales y seguir mejorando tu juego.
+          </p>
+          <div style={{ background:"rgba(200,155,60,0.07)", border:"1px solid rgba(200,155,60,0.2)", borderRadius:12, padding:20, marginBottom:24 }}>
+            <div style={{ color:"#f0e6d2", fontSize:28, fontWeight:900, marginBottom:4 }}>$4.99<span style={{ fontSize:14, fontWeight:400, color:"#888" }}>/mes</span></div>
+            <div style={{ color:"#c8c8c8", fontSize:13 }}>500 consultas · Game plans completos · Soporte prioritario</div>
+          </div>
+          <button
+            onClick={() => window.open("https://untroll.gg/premium", "_blank")}
+            style={{ width:"100%", background:"#c89b3c", color:"#080810", border:"none", borderRadius:8, padding:"14px 0", fontSize:16, fontWeight:900, cursor:"pointer", marginBottom:12, letterSpacing:0.5 }}
+          >
+            OBTENER PREMIUM
+          </button>
+          <button
+            onClick={() => setShowLimitModal(false)}
+            style={{ width:"100%", background:"transparent", color:"#888", border:"1px solid rgba(255,255,255,0.1)", borderRadius:8, padding:"10px 0", fontSize:14, cursor:"pointer" }}
+          >
+            Ahora no
+          </button>
+        </div>
+      </div>
+    )}
 
     </div>
   );
